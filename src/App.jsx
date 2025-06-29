@@ -66,7 +66,7 @@ function App() {
       suggestions.push({
         type: 'length',
         text: 'Add more details to make your prompt more specific',
-        icon: <Lightbulb className="w-4 h-4" />
+        icon: 'lightbulb'
       });
     }
     
@@ -74,7 +74,7 @@ function App() {
       suggestions.push({
         type: 'question',
         text: 'Consider adding a question word to make it more engaging',
-        icon: <Sparkles className="w-4 h-4" />
+        icon: 'sparkles'
       });
     }
     
@@ -82,7 +82,7 @@ function App() {
       suggestions.push({
         type: 'detail',
         text: 'Add specific requirements for better results',
-        icon: <Wand2 className="w-4 h-4" />
+        icon: 'wand2'
       });
     }
     
@@ -90,11 +90,27 @@ function App() {
       suggestions.push({
         type: 'format',
         text: 'Specify the desired format or style for the output',
-        icon: <Settings className="w-4 h-4" />
+        icon: 'settings'
       });
     }
     
     return suggestions;
+  };
+
+  // Get icon component for suggestions
+  const getSuggestionIcon = (icon) => {
+    switch (icon) {
+      case 'lightbulb':
+        return <Lightbulb className="w-4 h-4" />;
+      case 'sparkles':
+        return <Sparkles className="w-4 h-4" />;
+      case 'wand2':
+        return <Wand2 className="w-4 h-4" />;
+      case 'settings':
+        return <Settings className="w-4 h-4" />;
+      default:
+        return null;
+    }
   };
 
   // Handle input changes
@@ -271,7 +287,7 @@ function App() {
                   {suggestions.map((suggestion, index) => (
                     <div key={index} className="flex items-center justify-between bg-white/5 rounded-lg p-3">
                       <div className="flex items-center text-sm text-slate-300">
-                        {suggestion.icon}
+                        {getSuggestionIcon(suggestion.icon)}
                         <span className="ml-2">{suggestion.text}</span>
                       </div>
                       <button
