@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Key, User, Save, Eye, EyeOff, Download, Upload, Trash2 } from 'lucide-react';
-import llmService from '../services/llmService';
+import { Settings as SettingsIcon, User, Save, Download, Upload, Trash2 } from 'lucide-react';
 import contextService from '../services/contextService';
 
 const Settings = ({ isOpen, onClose }) => {
-  const [apiKey, setApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
   const [preferences, setPreferences] = useState({
     defaultTone: 'professional',
     defaultLength: 'medium',
-    enableLLM: true,
     enableContext: true,
     enableSuggestions: true,
     autoSave: true
@@ -20,11 +16,6 @@ const Settings = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       // Load current settings
-      const savedApiKey = localStorage.getItem('openai-api-key');
-      if (savedApiKey) {
-        setApiKey(savedApiKey.substring(0, 8) + '...');
-      }
-      
       const savedPreferences = contextService.getUserPreferences();
       setPreferences(prev => ({ ...prev, ...savedPreferences }));
     }
@@ -35,12 +26,6 @@ const Settings = ({ isOpen, onClose }) => {
     setMessage('');
 
     try {
-      // Save API key if provided
-      if (apiKey && !apiKey.includes('...')) {
-        llmService.setApiKey(apiKey);
-        setMessage('API key saved successfully!');
-      }
-
       // Save preferences
       contextService.updateUserPreferences(preferences);
       
@@ -86,26 +71,6 @@ const Settings = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleTestApiKey = async () => {
-    if (!apiKey || apiKey.includes('...')) {
-      setMessage('Please enter a valid API key first.');
-      return;
-    }
-
-    setIsSaving(true);
-    setMessage('Testing API key...');
-
-    try {
-      llmService.setApiKey(apiKey);
-      const testPrompt = await llmService.generateEnhancedPrompt('Test prompt');
-      setMessage('API key is working! LLM integration enabled.');
-    } catch (error) {
-      setMessage('API key test failed: ' + error.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -131,48 +96,6 @@ const Settings = ({ isOpen, onClose }) => {
             {message}
           </div>
         )}
-
-        {/* API Configuration */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-teal-300">
-            <Key className="w-5 h-5" />
-            OpenAI API Configuration
-          </h3>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium mb-1 text-gray-200">API Key</label>
-              <div className="relative">
-                <input
-                  type={showApiKey ? "text" : "password"}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-..."
-                  className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-gray-100 pr-10 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-2 top-2 text-gray-400 hover:text-gray-200"
-                >
-                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                Your API key is stored locally and never shared. Get your key from{' '}
-                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">
-                  OpenAI Platform
-                </a>
-              </p>
-            </div>
-            <button
-              onClick={handleTestApiKey}
-              disabled={isSaving || !apiKey || apiKey.includes('...')}
-              className="px-4 py-2 bg-teal-700 hover:bg-teal-600 text-white rounded font-semibold disabled:opacity-50"
-            >
-              Test API Key
-            </button>
-          </div>
-        </div>
 
         {/* User Preferences */}
         <div className="mb-6">
@@ -217,15 +140,6 @@ const Settings = ({ isOpen, onClose }) => {
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-3 text-teal-300">Feature Settings</h3>
           <div className="space-y-3">
-            <label className="flex items-center text-gray-200">
-              <input
-                type="checkbox"
-                checked={preferences.enableLLM}
-                onChange={(e) => setPreferences(prev => ({ ...prev, enableLLM: e.target.checked }))}
-                className="mr-2 accent-teal-500"
-              />
-              Enable LLM Integration (OpenAI API)
-            </label>
             <label className="flex items-center text-gray-200">
               <input
                 type="checkbox"
