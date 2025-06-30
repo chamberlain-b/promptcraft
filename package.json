@@ -1,0 +1,68 @@
+{
+  "name": "promptcraft",
+  "version": "1.0.0",
+  "description": "Transform your casual ideas into powerful AI prompts",
+  "private": true,
+  "homepage": "https://chamberlain-b.github.io/promptcraft",
+  "dependencies": {
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "lucide-react": "^0.525.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.6.0",
+    "autoprefixer": "^10.4.16",
+    "gh-pages": "^6.3.0",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "vercel": "^44.2.7",
+    "vite": "^7.0.0"
+  },
+  "keywords": [
+    "ai",
+    "prompts",
+    "prompt-engineering",
+    "react",
+    "javascript",
+    "machine-learning"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/promptcraft.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/promptcraft/issues"
+  }
+}
