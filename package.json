@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Transform your casual ideas into powerful AI prompts",
   "private": true,
-  "homepage": "https://chamberlain-b.github.io/promptcraft",
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -18,8 +17,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "start": "vite"
   },
   "eslintConfig": {
     "extends": [
