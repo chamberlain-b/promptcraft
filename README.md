@@ -1,217 +1,210 @@
-# PromptCraft 🪄
+# Prompt Craft 🚀
 
-Transform your casual ideas into powerful AI prompts with PromptCraft - an intelligent prompt enhancement tool that helps you get better results from any AI assistant.
-
-![PromptCraft Screenshot](https://via.placeholder.com/800x400/1a1a1a/teal?text=PromptCraft+Interface)
+Transform your casual ideas into powerful AI prompts with intelligent enhancement and context awareness.
 
 ## ✨ Features
 
-- **Smart Enhancement**: Automatically transforms simple ideas into detailed, structured prompts
-- **Voice Input**: Speak your ideas directly using voice recognition (Chrome/Edge)
-- **Intelligent Suggestions**: Context-aware suggestions to improve your prompts
-- **Real-time Processing**: Instant prompt enhancement with visual feedback
-- **Copy to Clipboard**: One-click copying of enhanced prompts
+### 🤖 LLM Integration
+- **OpenAI API Support**: Connect your OpenAI API key for intelligent prompt generation
+- **Smart Intent Detection**: Automatically analyzes your input to determine the best approach
+- **Context-Aware Generation**: Uses conversation history to create more relevant prompts
+- **Fallback Enhancement**: Works offline with local prompt enhancement when API is unavailable
+
+### 🧠 Intelligent Context Management
+- **Conversation Memory**: Remembers your previous interactions for better continuity
+- **Intent Tracking**: Learns from your usage patterns to improve suggestions
+- **Smart Suggestions**: Provides contextual recommendations based on your input
+- **Similar Request Detection**: Finds and references similar previous prompts
+
+### 🎯 Enhanced Prompt Generation
+- **Dynamic Role Assignment**: Automatically assigns expert roles based on your request
+- **Adaptive Constraints**: Generates relevant constraints and requirements
+- **Format Optimization**: Suggests optimal output formats for different types of requests
+- **Multi-Domain Support**: Specialized handling for writing, coding, analysis, planning, and more
+
+### ⚙️ Advanced Settings
+- **API Key Management**: Secure storage and testing of OpenAI API keys
+- **User Preferences**: Customize default tone, length, and behavior
+- **Feature Toggles**: Enable/disable specific features as needed
+- **Data Management**: Export, import, and clear your conversation history
+
+### 🎨 User Experience
+- **Voice Input**: Speech-to-text support for hands-free operation
+- **Smart Suggestions**: Real-time recommendations to improve your prompts
+- **History Management**: Easy access to previous prompts with search and export
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
-- **Example Templates**: Pre-built examples for common use cases
 
-## 🚀 Live Demo
-
-[View Live Demo](https://yourusername.github.io/promptcraft) *(Replace with your actual URL)*
-
-## 🛠️ Tech Stack
-
-- **Frontend**: React 19.1.0
-- **Styling**: Tailwind CSS 4.1.11
-- **Icons**: Lucide React 0.525.0
-- **Speech**: Web Speech API
-- **Build**: Create React App
-
-## 📦 Installation
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (version 16 or higher)
+- Node.js (v16 or higher)
 - npm or yarn
-- Git
+- OpenAI API key (optional, for enhanced features)
 
-### Setup
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/promptcraft.git
-cd promptcraft
+### Installation
 
-# Install dependencies
-npm install
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/promptcraft.git
+   cd promptcraft
+   ```
 
-# Start development server
-npm start
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open your browser**
+   Navigate to `http://localhost:5173`
+
+### Configuration
+
+1. **Set up OpenAI API (Optional)**
+   - Click the "Settings" button in the app
+   - Enter your OpenAI API key
+   - Test the connection
+   - Enable LLM integration features
+
+2. **Customize Preferences**
+   - Set your preferred default tone and length
+   - Configure feature toggles
+   - Adjust context memory settings
+
+## 🎯 Usage Examples
+
+### Content Writing
+**Input**: "write a blog post about AI"
+**Enhanced Output**: 
+```
+You are an expert content writer and storyteller. You are creating engaging, well-structured content that captivates readers and provides value.
+
+**TASK:**
+write a blog post about AI
+
+**REQUIREMENTS:**
+• Target length: 500-800 words
+• Tone: Professional yet engaging
+• Include engaging introduction and conclusion
+• Use clear structure with headings
+
+**OUTPUT FORMAT:**
+• Use clear headings and subheadings
+• Include engaging introduction and conclusion
+• Use paragraphs for readability
+• Incorporate relevant examples
+
+**ADDITIONAL GUIDELINES:**
+• Provide comprehensive, well-researched information
+• Use clear, professional language
+• Include relevant context and background information
+• Ensure accuracy and reliability of information
+• Consider the user's level of expertise
+• Provide actionable insights and next steps
+• Format the response for easy reading and implementation
 ```
 
-The app will open at `http://localhost:3000`
+### Code Generation
+**Input**: "create a Python function to sort a list"
+**Enhanced Output**:
+```
+You are a senior software engineer and technical mentor. You are providing clear, well-documented, production-ready code solutions with best practices.
 
-## 🏗️ Build for Production
+**TASK:**
+create a Python function to sort a list
 
-```bash
-# Create production build
-npm run build
+**REQUIREMENTS:**
+• Include comprehensive error handling
+• Follow best practices and coding standards
+• Provide detailed comments and documentation
+• Include usage examples
 
-# Preview production build locally
-npx serve -s build
+**OUTPUT FORMAT:**
+• Provide complete, runnable code
+• Include detailed comments
+• Add usage examples
+• Explain the logic and approach
+
+**ADDITIONAL GUIDELINES:**
+• Provide comprehensive, well-researched information
+• Use clear, professional language
+• Include relevant context and background information
+• Ensure accuracy and reliability of information
+• Consider the user's level of expertise
+• Provide actionable insights and next steps
+• Format the response for easy reading and implementation
 ```
 
-## 🌐 Deployment
+## 🔧 Technical Architecture
 
-### Netlify (Recommended)
-1. Build the project: `npm run build`
-2. Deploy the `build` folder to Netlify
-3. Or connect your GitHub repo for automatic deployments
+### Services
+- **LLM Service**: Handles OpenAI API integration and local enhancement
+- **Context Service**: Manages conversation history and user preferences
+- **Settings Service**: Handles configuration and data management
 
-### Vercel
-```bash
-npm i -g vercel
-vercel
+### Key Components
+- **Intent Analysis**: Determines the type and context of user requests
+- **Context Enhancement**: Adds relevant information from previous interactions
+- **Prompt Generation**: Creates structured, effective prompts
+- **History Management**: Stores and retrieves conversation data
+
+### Data Flow
+1. User inputs a request
+2. System analyzes intent and context
+3. LLM service generates enhanced prompt
+4. Context service stores interaction
+5. User receives optimized prompt
+
+## 🛠️ Development
+
+### Project Structure
+```
+src/
+├── components/
+│   └── Settings.jsx          # Settings modal component
+├── services/
+│   ├── llmService.js         # LLM integration service
+│   └── contextService.js     # Context management service
+├── App.jsx                   # Main application component
+├── index.css                 # Global styles
+└── main.jsx                  # Application entry point
 ```
 
-### GitHub Pages
-```bash
-npm run deploy
-```
-
-## 🎯 Usage
-
-1. **Enter Your Idea**: Type or speak your basic prompt idea
-2. **Get Suggestions**: Review intelligent suggestions to enhance your prompt
-3. **Generate**: Click "Generate Prompt" to create an enhanced version
-4. **Copy & Use**: Copy the enhanced prompt and use it with any AI assistant
-
-### Examples
-
-**Input**: "write a story about space travel"
-
-**Enhanced Output**: "Given the context of your request, write a story about space travel. Please provide specific, detailed information. Structure your response in a clear, organized manner. Use a professional yet engaging tone."
-
-## 🎨 Customization
-
-### Modifying Suggestions
-Edit the `generateSuggestions` function in `src/App.js` to customize suggestion logic:
-
-```javascript
-const generateSuggestions = (text) => {
-  // Add your custom suggestion logic here
-  const suggestions = [];
-  // ... your logic
-  return suggestions;
-};
-```
-
-### Styling
-- Modify `tailwind.config.js` for theme customization
-- Update component classes in `src/App.js`
-- Add custom CSS in `src/index.css`
-
-## 🔧 Configuration
+### Available Scripts
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
 
 ### Environment Variables
-Create a `.env` file in the root directory:
-
-```env
-REACT_APP_VERSION=1.0.0
-REACT_APP_NAME=PromptCraft
-```
-
-### Browser Support
-- ✅ Chrome/Edge (full features including voice input)
-- ✅ Firefox (all features except voice input)
-- ✅ Safari (all features except voice input)
-- ✅ Mobile browsers (touch optimized)
-
-## 📱 Mobile Features
-
-- Responsive design works on all screen sizes
-- Touch-optimized interface
-- Voice input supported on compatible mobile browsers
-- Optimized for both portrait and landscape orientations
+- `REACT_APP_OPENAI_API_KEY` - OpenAI API key (optional)
 
 ## 🤝 Contributing
 
-We welcome contributions! Please follow these steps:
-
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes
-4. Add tests if applicable
-5. Commit: `git commit -m 'Add feature-name'`
-6. Push: `git push origin feature-name`
-7. Open a Pull Request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-### Development Guidelines
-- Follow existing code style and conventions
-- Add comments for complex logic
-- Test your changes across different browsers
-- Update documentation for new features
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Voice recognition not working:**
-- Ensure you're using Chrome or Edge browser
-- Grant microphone permissions when prompted
-- Voice input requires HTTPS in production
-
-**Styles not loading:**
-- Clear browser cache
-- Ensure Tailwind is properly configured
-- Check console for CSS errors
-
-**Build fails:**
-```bash
-# Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
-npm run build
-```
-
-## 📊 Performance
-
-- **First Contentful Paint**: < 1.5s
-- **Largest Contentful Paint**: < 2.5s
-- **Cumulative Layout Shift**: < 0.1
-- **Time to Interactive**: < 3.0s
-
-## 🔒 Privacy & Security
-
-- No data is stored externally
-- Voice input processed locally in browser
-- No tracking or analytics by default
-- All processing happens client-side
-
-## 📄 License
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- Icons by [Lucide](https://lucide.dev/)
-- Styling framework by [Tailwind CSS](https://tailwindcss.com/)
-- Built with [React](https://reactjs.org/)
+- Built with React and Vite
+- Styled with Tailwind CSS
+- Icons from Lucide React
+- LLM integration powered by OpenAI
 
 ## 📞 Support
 
-- 📧 Email: your.email@example.com
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/promptcraft/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/yourusername/promptcraft/discussions)
-
-## 🗺️ Roadmap
-
-- [ ] AI API integration for real prompt enhancement
-- [ ] Prompt templates library
-- [ ] User accounts and saved prompts
-- [ ] Team collaboration features
-- [ ] Browser extension
-- [ ] Mobile app
+If you have any questions or need help, please open an issue on GitHub or contact the maintainers.
 
 ---
 
-**Made with ❤️ for the AI community**
-
-*Replace `yourusername` with your actual GitHub username throughout this file.*
+**Transform your AI interactions with Prompt Craft! 🚀**

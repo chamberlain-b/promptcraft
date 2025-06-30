@@ -102,3 +102,4 @@ jspm_packages/
 
 # Cursor environment
 .curser-env 
+.vercel

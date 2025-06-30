@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Wand2, Copy, RefreshCw, Sparkles, MessageSquare, Code, PenTool, Mic, MicOff, Volume2, History, Download, Trash2, ChefHat, Calendar, Lightbulb, Plus } from 'lucide-react';
+import { Wand2, Copy, RefreshCw, Sparkles, MessageSquare, Code, PenTool, Mic, MicOff, Volume2, History, Download, Trash2, ChefHat, Calendar, Lightbulb, Plus, Settings as SettingsIcon, Brain, Zap } from 'lucide-react';
+import llmService from './services/llmService';
+import contextService from './services/contextService';
+import Settings from './components/Settings';
 
 const PromptGenerator = () => {
   const [input, setInput] = useState('');
@@ -11,7 +14,14 @@ const PromptGenerator = () => {
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [currentIntent, setCurrentIntent] = useState(null);
+  const [contextInfo, setContextInfo] = useState(null);
+  const [llmStatus, setLlmStatus] = useState('checking');
   const recognitionRef = useRef(null);
+  const [requestsLeft, setRequestsLeft] = useState(null);
+  const [requestLimit, setRequestLimit] = useState(null);
+  const [requestError, setRequestError] = useState(null);
 
   // Load history from localStorage on component mount
   useEffect(() => {
@@ -19,12 +29,35 @@ const PromptGenerator = () => {
     if (savedHistory) {
       setHistory(JSON.parse(savedHistory));
     }
+    
+    // Check LLM status
+    checkLlmStatus();
   }, []);
 
   // Save history to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('promptcraft-history', JSON.stringify(history));
   }, [history]);
+
+  // Update suggestions when input changes
+  useEffect(() => {
+    const userPreferences = contextService.getUserPreferences();
+    if (userPreferences.enableSuggestions !== false) {
+      const newSuggestions = generateSuggestions(input);
+      setSuggestions(newSuggestions);
+    } else {
+      setSuggestions([]);
+    }
+  }, [input]);
+
+  const checkLlmStatus = () => {
+    const apiKey = localStorage.getItem('openai-api-key');
+    if (apiKey) {
+      setLlmStatus('available');
+    } else {
+      setLlmStatus('unavailable');
+    }
+  };
 
   useEffect(() => {
     // Check for speech recognition support
@@ -199,22 +232,22 @@ const PromptGenerator = () => {
         newInput += ' in Python';
         break;
       case 'comments':
-        newInput += ' with detailed comments explaining each part';
+        newInput += ' with detailed comments and explanations';
         break;
       case 'format':
-        newInput += ' in a clear, structured format with bullet points';
+        newInput += ' in bullet point format';
         break;
       case 'detail':
         newInput += ' with comprehensive details and examples';
         break;
       case 'dietary':
-        newInput += ' (vegetarian-friendly)';
+        newInput += ' (vegetarian options)';
         break;
       case 'servings':
         newInput += ' for 4 people';
         break;
       case 'budget':
-        newInput += ' on a moderate budget';
+        newInput += ' on a budget';
         break;
       case 'timeframe':
         newInput += ' for the next week';
@@ -223,7 +256,7 @@ const PromptGenerator = () => {
         newInput += ' (high priority)';
         break;
       default:
-        break;
+        newInput += ' with more specific details';
     }
     
     setInput(newInput);
@@ -233,303 +266,70 @@ const PromptGenerator = () => {
     if (!recordingSupported) return;
     
     if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
+      recognitionRef.current.stop();
     } else {
-      recognitionRef.current?.start();
+      recognitionRef.current.start();
       setIsListening(true);
     }
   };
 
-  const examples = [
-    {
-      icon: <MessageSquare className="w-5 h-5" />,
-      title: "Creative Writing",
-      input: "write a story about a robot",
-      output: "Create an engaging short story featuring a robot as the main character. Include vivid descriptions, compelling dialogue, and explore themes of humanity and technology. The story should be approximately 500-800 words with a clear beginning, middle, and end. Use descriptive language to create immersive scenes and develop the robot's character arc throughout the narrative."
-    },
-    {
-      icon: <Code className="w-5 h-5" />,
-      title: "Code Help",
-      input: "fix my python code",
-      output: "Please help me debug and improve my Python code. I need you to: 1) Identify any syntax or logical errors, 2) Suggest best practices and optimizations, 3) Explain what each fix does and why it's necessary, 4) Provide the corrected version with clear comments, 5) Include error handling where appropriate, 6) Suggest any performance improvements. Please format the code clearly with proper indentation and comments."
-    },
-    {
-      icon: <PenTool className="w-5 h-5" />,
-      title: "Analysis",
-      input: "explain this data",
-      output: "Analyze the provided data and provide a comprehensive explanation including: 1) Key patterns and trends you observe, 2) Statistical insights and significance, 3) Potential implications or conclusions, 4) Recommendations based on the findings, 5) Visual representation suggestions (charts, graphs), 6) Context and background information. Present your analysis in a clear, structured format with bullet points and numbered lists where appropriate."
-    },
-    {
-      icon: <ChefHat className="w-5 h-5" />,
-      title: "Meal Planning",
-      input: "create a meal plan",
-      output: "Create a comprehensive 7-day meal plan with the following format:\n\n**BREAKFAST**\n- Day 1: [Recipe name] - [Brief description]\n- Ingredients: [List]\n- Instructions: [Step-by-step]\n- Prep time: [X minutes]\n- Cook time: [X minutes]\n- Servings: [X]\n\n**LUNCH**\n[Same format for each day]\n\n**DINNER**\n[Same format for each day]\n\n**SHOPPING LIST**\n- Produce: [Items with quantities]\n- Proteins: [Items with quantities]\n- Pantry: [Items with quantities]\n- Dairy: [Items with quantities]\n\n**NUTRITIONAL NOTES**\n- Total calories per day: [Range]\n- Dietary considerations: [Any restrictions or preferences]\n- Budget estimate: [Weekly cost]\n\nFormat this in a way that can easily be copied into Apple Notes, Word, Excel, or Notion with proper formatting preserved."
-    },
-    {
-      icon: <Calendar className="w-5 h-5" />,
-      title: "Daily Tasks",
-      input: "organize my day",
-      output: "Create a structured daily task management system with the following format:\n\n**MORNING ROUTINE (6:00 AM - 9:00 AM)**\n- [ ] [Specific task with time estimate]\n- [ ] [Next task]\n- Priority: [High/Medium/Low]\n\n**WORK BLOCKS (9:00 AM - 5:00 PM)**\n- Block 1 (9:00-11:00): [Focus area with specific goals]\n- Block 2 (11:00-12:00): [Task or meeting]\n- Block 3 (1:00-3:00): [Deep work session]\n- Block 4 (3:00-5:00): [Administrative tasks]\n\n**EVENING ROUTINE (5:00 PM - 9:00 PM)**\n- [ ] [Specific task]\n- [ ] [Next task]\n\n**WEEKLY PLANNING TEMPLATE**\n- Monday: [Theme or focus area]\n- Tuesday: [Theme or focus area]\n- Wednesday: [Theme or focus area]\n- Thursday: [Theme or focus area]\n- Friday: [Theme or focus area]\n\n**PRODUCTIVITY TIPS**\n- Use time blocking for focused work\n- Take 5-minute breaks every hour\n- Review and adjust plan daily\n\nFormat this in a clean, checklist-friendly format that can be easily exported to any note-taking app."
-    },
-    {
-      icon: <MessageSquare className="w-5 h-5" />,
-      title: "Email Writing",
-      input: "write a professional email",
-      output: "Compose a professional email that is clear, concise, and well-structured. Include: 1) A compelling subject line that clearly states the purpose, 2) Proper greeting and introduction that establishes context, 3) Clear main message with supporting details and specific requests, 4) Professional closing with next steps or call to action, 5) Appropriate signature with contact information. Ensure the tone is professional yet approachable, and the content is organized with proper paragraphs and formatting. Include any relevant deadlines, attachments, or follow-up information."
-    }
-  ];
-
   const generatePrompt = async () => {
     if (!input.trim()) return;
-    
     setIsGenerating(true);
-    
-    // Simulate API processing time
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Enhanced prompt enhancement logic for optimal AI responses
-    let enhanced = input.trim();
-    const lowerInput = enhanced.toLowerCase();
-    
-    // Determine the primary intent and context
-    let intent = 'general';
-    let role = '';
-    let context = '';
-    let constraints = '';
-    let outputFormat = '';
-    let examples = '';
-    
-    // Analyze input to determine intent and set appropriate role
-    if (lowerInput.includes('write') || lowerInput.includes('story') || lowerInput.includes('article') || lowerInput.includes('blog')) {
-      intent = 'writing';
-      role = 'expert content writer and storyteller';
-      context = 'You are creating engaging, well-structured content that captivates readers and provides value.';
-    } else if (lowerInput.includes('code') || lowerInput.includes('program') || lowerInput.includes('script') || lowerInput.includes('debug')) {
-      intent = 'coding';
-      role = 'senior software engineer and technical mentor';
-      context = 'You are providing clear, well-documented, production-ready code solutions with best practices.';
-    } else if (lowerInput.includes('analyze') || lowerInput.includes('explain') || lowerInput.includes('data') || lowerInput.includes('research')) {
-      intent = 'analysis';
-      role = 'data analyst and research specialist';
-      context = 'You are conducting thorough analysis and providing actionable insights with clear explanations.';
-    } else if (lowerInput.includes('email') || lowerInput.includes('message') || lowerInput.includes('communication')) {
-      intent = 'communication';
-      role = 'professional communication expert';
-      context = 'You are crafting clear, effective, and appropriate messages for the intended audience.';
-    } else if (lowerInput.includes('meal') || lowerInput.includes('food') || lowerInput.includes('recipe') || lowerInput.includes('diet')) {
-      intent = 'meal-planning';
-      role = 'nutritionist and meal planning expert';
-      context = 'You are creating comprehensive, practical meal plans that are healthy, delicious, and easy to follow.';
-    } else if (lowerInput.includes('plan') || lowerInput.includes('organize') || lowerInput.includes('schedule') || lowerInput.includes('task')) {
-      intent = 'planning';
-      role = 'productivity consultant and project manager';
-      context = 'You are creating structured, actionable plans that maximize efficiency and achieve goals.';
-    } else if (lowerInput.includes('teach') || lowerInput.includes('learn') || lowerInput.includes('education') || lowerInput.includes('tutorial')) {
-      intent = 'education';
-      role = 'experienced educator and subject matter expert';
-      context = 'You are providing clear, comprehensive instruction that makes complex topics accessible.';
-    } else if (lowerInput.includes('design') || lowerInput.includes('create') || lowerInput.includes('build') || lowerInput.includes('develop')) {
-      intent = 'creation';
-      role = 'creative professional and design expert';
-      context = 'You are developing innovative, well-thought-out solutions and creative concepts.';
-    } else if (lowerInput.includes('business') || lowerInput.includes('strategy') || lowerInput.includes('marketing') || lowerInput.includes('sales')) {
-      intent = 'business';
-      role = 'business strategist and consultant';
-      context = 'You are providing strategic business insights and actionable recommendations.';
-    } else if (lowerInput.includes('health') || lowerInput.includes('fitness') || lowerInput.includes('wellness') || lowerInput.includes('medical')) {
-      intent = 'health';
-      role = 'health and wellness expert';
-      context = 'You are providing evidence-based health and wellness guidance.';
-    } else if (lowerInput.includes('travel') || lowerInput.includes('trip') || lowerInput.includes('vacation') || lowerInput.includes('itinerary')) {
-      intent = 'travel';
-      role = 'travel planner and destination expert';
-      context = 'You are creating comprehensive travel plans that maximize enjoyment and minimize stress.';
-    } else if (lowerInput.includes('finance') || lowerInput.includes('money') || lowerInput.includes('budget') || lowerInput.includes('investment')) {
-      intent = 'finance';
-      role = 'financial advisor and budgeting expert';
-      context = 'You are providing sound financial advice and practical money management strategies.';
-    } else if (lowerInput.includes('legal') || lowerInput.includes('law') || lowerInput.includes('contract') || lowerInput.includes('agreement')) {
-      intent = 'legal';
-      role = 'legal consultant and document specialist';
-      context = 'You are providing general legal information and document guidance (not legal advice).';
-    } else if (lowerInput.includes('career') || lowerInput.includes('job') || lowerInput.includes('resume') || lowerInput.includes('interview')) {
-      intent = 'career';
-      role = 'career coach and professional development expert';
-      context = 'You are providing career guidance and professional development strategies.';
-    } else {
-      intent = 'general';
-      role = 'expert consultant and problem solver';
-      context = 'You are providing comprehensive, well-researched solutions to the user\'s request.';
-    }
-    
-    // Build constraints based on intent
-    if (intent === 'writing') {
-      if (!lowerInput.includes('length') && !lowerInput.includes('word')) {
-        constraints += '• Target length: 500-800 words\n';
+    setCurrentIntent(null);
+    setContextInfo(null);
+    setRequestError(null);
+
+    try {
+      // Analyze intent first
+      const intentAnalysis = await llmService.analyzeIntent(input.trim());
+      setCurrentIntent(intentAnalysis);
+      // Get enhanced context
+      const userPreferences = contextService.getUserPreferences();
+      let context = {};
+      if (userPreferences.enableContext !== false) {
+        context = contextService.getEnhancedContext(input.trim(), intentAnalysis.intent);
+        setContextInfo(context);
       }
-      if (!lowerInput.includes('tone') && !lowerInput.includes('style')) {
-        constraints += '• Tone: Professional yet engaging\n';
+      // Generate enhanced prompt via backend
+      const result = await llmService.generateEnhancedPrompt(input.trim(), context);
+      setRequestsLeft(result.requestsLeft);
+      setRequestLimit(result.limit);
+      if (result.error) {
+        setRequestError(result.error);
+        setOutput('');
+        setIsGenerating(false);
+        return;
       }
-      if (!lowerInput.includes('audience')) {
-        constraints += '• Audience: General audience with varying levels of expertise\n';
+      setOutput(result.output);
+      // Add to context service history
+      if (userPreferences.autoSave !== false) {
+        contextService.addToHistory(input.trim(), result.output, intentAnalysis);
       }
-    } else if (intent === 'coding') {
-      if (!lowerInput.includes('language')) {
-        constraints += '• Programming language: Python (unless specified otherwise)\n';
-      }
-      constraints += '• Include comprehensive error handling\n';
-      constraints += '• Follow best practices and coding standards\n';
-      constraints += '• Provide detailed comments and documentation\n';
-    } else if (intent === 'analysis') {
-      constraints += '• Provide data-driven insights\n';
-      constraints += '• Include relevant statistics and trends\n';
-      constraints += '• Offer actionable recommendations\n';
-      constraints += '• Consider multiple perspectives\n';
-    } else if (intent === 'meal-planning') {
-      constraints += '• Consider nutritional balance\n';
-      constraints += '• Include dietary restrictions if mentioned\n';
-      constraints += '• Provide realistic prep times\n';
-      constraints += '• Consider budget constraints\n';
-    } else if (intent === 'planning') {
-      constraints += '• Include specific timeframes\n';
-      constraints += '• Prioritize tasks by importance\n';
-      constraints += '• Consider resource constraints\n';
-      constraints += '• Provide actionable next steps\n';
-    } else if (intent === 'travel') {
-      constraints += '• Consider budget and time constraints\n';
-      constraints += '• Include practical travel tips\n';
-      constraints += '• Provide alternative options\n';
-      constraints += '• Consider seasonal factors\n';
-    } else if (intent === 'finance') {
-      constraints += '• Provide conservative, practical advice\n';
-      constraints += '• Include risk considerations\n';
-      constraints += '• Consider different financial situations\n';
-      constraints += '• Include long-term planning aspects\n';
-    } else if (intent === 'legal') {
-      constraints += '• Provide general information only\n';
-      constraints += '• Include disclaimers about legal advice\n';
-      constraints += '• Suggest when to consult professionals\n';
-      constraints += '• Focus on practical guidance\n';
-    } else if (intent === 'career') {
-      constraints += '• Consider current market trends\n';
-      constraints += '• Include actionable steps\n';
-      constraints += '• Provide industry-specific advice\n';
-      constraints += '• Include networking and skill development\n';
+      // Add to local history for backward compatibility
+      const historyItem = {
+        id: Date.now(),
+        input: input.trim(),
+        output: result.output,
+        timestamp: new Date().toISOString()
+      };
+      setHistory(prev => [historyItem, ...prev.slice(0, 9)]); // Keep last 10 items
+    } catch (error) {
+      setOutput('Error generating prompt. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
-    
-    // Set output format based on intent
-    if (intent === 'writing') {
-      outputFormat = '• Use clear headings and subheadings\n• Include engaging introduction and conclusion\n• Use paragraphs for readability\n• Incorporate relevant examples or anecdotes';
-    } else if (intent === 'coding') {
-      outputFormat = '• Provide complete, runnable code\n• Include detailed comments\n• Add usage examples\n• Explain the logic and approach';
-    } else if (intent === 'analysis') {
-      outputFormat = '• Use bullet points for key findings\n• Include numbered lists for steps\n• Provide clear section headers\n• Use tables or charts where appropriate';
-    } else if (intent === 'meal-planning') {
-      outputFormat = '• Organize by meal type and day\n• Include ingredient quantities\n• Provide step-by-step instructions\n• Add nutritional information\n• Create organized shopping lists';
-    } else if (intent === 'planning') {
-      outputFormat = '• Use checkboxes for actionable items\n• Include time estimates\n• Organize by priority levels\n• Provide clear deadlines\n• Include progress tracking elements';
-    } else if (intent === 'travel') {
-      outputFormat = '• Organize by day and location\n• Include practical details (addresses, times, costs)\n• Provide alternative options\n• Include packing suggestions\n• Add local tips and recommendations';
-    } else if (intent === 'finance') {
-      outputFormat = '• Use clear financial terminology\n• Include calculations and examples\n• Provide step-by-step action plans\n• Include risk assessments\n• Add long-term planning considerations';
-    } else if (intent === 'legal') {
-      outputFormat = '• Use clear, non-technical language\n• Include important disclaimers\n• Provide general guidance only\n• Suggest professional consultation when needed\n• Include relevant resources and references';
-    } else if (intent === 'career') {
-      outputFormat = '• Include industry-specific insights\n• Provide actionable career steps\n• Include skill development recommendations\n• Add networking strategies\n• Include market trend analysis';
-    } else {
-      outputFormat = '• Use clear, organized structure\n• Include relevant examples\n• Provide actionable insights\n• Use appropriate formatting for readability';
-    }
-    
-    // Add examples requirement for complex topics
-    if (intent === 'education' || intent === 'coding' || intent === 'business') {
-      examples = '• Include practical examples\n• Provide real-world applications\n• Use case studies where relevant\n• Include step-by-step demonstrations';
-    }
-    
-    // Construct the enhanced prompt
-    let finalPrompt = `You are an expert ${role}. ${context}
-
-**TASK:**
-${enhanced}
-
-**REQUIREMENTS:**
-${constraints}
-
-**OUTPUT FORMAT:**
-${outputFormat}
-${examples ? `\n**EXAMPLES AND APPLICATIONS:**\n${examples}` : ''}
-
-**ADDITIONAL GUIDELINES:**
-• Provide comprehensive, well-researched information
-• Use clear, professional language
-• Include relevant context and background information
-• Ensure accuracy and reliability of information
-• Consider the user's level of expertise
-• Provide actionable insights and next steps
-• Format the response for easy reading and implementation
-
-**SUCCESS CRITERIA:**
-Your response should be:
-• Comprehensive and thorough in addressing the request
-• Well-structured with clear organization
-• Actionable with specific next steps
-• Professional yet accessible in tone
-• Accurate and up-to-date with current information
-• Practical and implementable
-
-Please provide a detailed, structured response that addresses all aspects of the request.`;
-
-    // Add specific enhancements based on content type
-    if (enhanced.length < 100) {
-      if (lowerInput.includes('write')) {
-        finalPrompt += '\n\n**SPECIFIC WRITING REQUIREMENTS:**\n• Create engaging opening hooks\n• Develop compelling narrative structure\n• Use vivid descriptions and sensory details\n• Include character development (if applicable)\n• Ensure logical flow and transitions\n• End with satisfying conclusion';
-      } else if (lowerInput.includes('explain')) {
-        finalPrompt += '\n\n**EXPLANATION REQUIREMENTS:**\n• Break down complex concepts into simple terms\n• Use analogies and metaphors where helpful\n• Provide step-by-step explanations\n• Include relevant examples and use cases\n• Address potential questions or confusion points\n• Summarize key takeaways';
-      } else if (lowerInput.includes('code') || lowerInput.includes('program')) {
-        finalPrompt += '\n\n**CODE REQUIREMENTS:**\n• Write clean, maintainable code\n• Include input validation and error handling\n• Add comprehensive documentation\n• Provide usage examples and test cases\n• Explain the algorithm or approach used\n• Consider performance and scalability';
-      } else if (lowerInput.includes('analyze')) {
-        finalPrompt += '\n\n**ANALYSIS REQUIREMENTS:**\n• Identify key patterns and trends\n• Provide statistical significance where applicable\n• Consider multiple perspectives and interpretations\n• Include relevant comparisons and benchmarks\n• Highlight implications and potential outcomes\n• Provide evidence-based recommendations';
-      } else if (lowerInput.includes('meal') || lowerInput.includes('food') || lowerInput.includes('recipe')) {
-        finalPrompt += '\n\n**MEAL PLANNING REQUIREMENTS:**\n• Create nutritionally balanced meals\n• Consider seasonal availability of ingredients\n• Include variety in flavors and textures\n• Provide realistic cooking times and difficulty levels\n• Include storage and reheating instructions\n• Consider dietary preferences and restrictions';
-      } else if (lowerInput.includes('plan') || lowerInput.includes('organize') || lowerInput.includes('schedule')) {
-        finalPrompt += '\n\n**PLANNING REQUIREMENTS:**\n• Create realistic and achievable timelines\n• Include buffer time for unexpected issues\n• Prioritize tasks by importance and urgency\n• Consider resource availability and constraints\n• Include progress checkpoints and milestones\n• Provide contingency plans for potential obstacles';
-      } else if (lowerInput.includes('travel') || lowerInput.includes('trip') || lowerInput.includes('vacation')) {
-        finalPrompt += '\n\n**TRAVEL PLANNING REQUIREMENTS:**\n• Research current travel conditions and restrictions\n• Include practical logistics (transportation, accommodation)\n• Provide budget estimates and cost-saving tips\n• Include local customs and cultural considerations\n• Add safety and health recommendations\n• Provide backup plans for weather or other disruptions';
-      } else if (lowerInput.includes('finance') || lowerInput.includes('money') || lowerInput.includes('budget')) {
-        finalPrompt += '\n\n**FINANCIAL PLANNING REQUIREMENTS:**\n• Provide conservative, well-researched advice\n• Include risk assessment and mitigation strategies\n• Consider different income levels and situations\n• Include long-term financial planning aspects\n• Provide step-by-step implementation guidance\n• Include relevant financial tools and resources';
-      } else if (lowerInput.includes('career') || lowerInput.includes('job') || lowerInput.includes('resume')) {
-        finalPrompt += '\n\n**CAREER DEVELOPMENT REQUIREMENTS:**\n• Research current industry trends and opportunities\n• Provide actionable skill development strategies\n• Include networking and relationship-building advice\n• Consider different career stages and goals\n• Include market analysis and salary information\n• Provide interview and application strategies';
-      }
-    }
-    
-    // Add export-friendly formatting for specific types
-    if (lowerInput.includes('meal') || lowerInput.includes('plan') || lowerInput.includes('organize') || lowerInput.includes('schedule')) {
-      finalPrompt += '\n\n**EXPORT FORMATTING:**\nStructure the response in a format that can be easily copied and pasted into note-taking apps like Apple Notes, Word, Excel, or Notion while preserving formatting and organization. Use clear headers, bullet points, and numbered lists where appropriate.';
-    }
-    
-    setOutput(finalPrompt);
-    
-    // Add to history
-    const historyItem = {
-      id: Date.now(),
-      input: input.trim(),
-      output: finalPrompt,
-      timestamp: new Date().toISOString()
-    };
-    setHistory(prev => [historyItem, ...prev.slice(0, 9)]); // Keep last 10 items
-    
-    setIsGenerating(false);
   };
 
   const copyToClipboard = async () => {
-    if (output) {
-      try {
-        await navigator.clipboard.writeText(output);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy text: ', err);
-      }
+    if (!output) return;
+    
+    try {
+      await navigator.clipboard.writeText(output);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
     }
   };
 
@@ -541,80 +341,169 @@ Please provide a detailed, structured response that addresses all aspects of the
   const clearAll = () => {
     setInput('');
     setOutput('');
-    setSuggestions([]);
+    setCurrentIntent(null);
+    setContextInfo(null);
   };
 
   const loadFromHistory = (historyItem) => {
     setInput(historyItem.input);
     setOutput(historyItem.output);
-    setShowHistory(false);
   };
 
   const deleteHistoryItem = (id) => {
     setHistory(prev => prev.filter(item => item.id !== id));
+    contextService.deleteHistoryItem(id);
   };
 
   const exportHistory = () => {
-    const dataStr = JSON.stringify(history, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `promptcraft-history-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    contextService.exportHistory();
   };
 
   const clearHistory = () => {
-    setHistory([]);
-    setShowHistory(false);
+    if (window.confirm('Are you sure you want to clear all history?')) {
+      setHistory([]);
+      contextService.clearHistory();
+    }
   };
 
-  // Update suggestions when input changes
-  useEffect(() => {
-    const newSuggestions = generateSuggestions(input);
-    setSuggestions(newSuggestions);
-  }, [input]);
+  const examples = [
+    {
+      title: "Content Writing",
+      input: "write a blog post about AI",
+      output: "You are an expert content writer and technology journalist with deep knowledge of artificial intelligence. Write a comprehensive, engaging blog post about AI that covers current trends, applications, and future implications. The post should be 800-1200 words, include relevant examples and case studies, use clear headings and subheadings, maintain a professional yet accessible tone, and provide actionable insights for readers. Include an engaging introduction, well-structured body with supporting evidence, and a compelling conclusion that encourages further engagement with the topic.",
+      icon: <PenTool className="w-5 h-5" />
+    },
+    {
+      title: "Code Generation",
+      input: "create a Python function to sort a list",
+      output: "You are a senior software engineer and technical mentor with extensive experience in Python development. Create a comprehensive Python function to sort a list that demonstrates best practices and includes multiple sorting options. The function should handle different data types, include comprehensive error handling, provide detailed comments explaining the logic, and include usage examples with different scenarios. Consider edge cases like empty lists, mixed data types, and performance optimization. Provide both the function implementation and clear documentation on how to use it effectively.",
+      icon: <Code className="w-5 h-5" />
+    },
+    {
+      title: "Data Analysis",
+      input: "analyze sales data trends",
+      output: "You are a data analyst and research specialist with expertise in sales analytics and business intelligence. Conduct a comprehensive analysis of sales data trends that provides actionable insights for business decision-making. Your analysis should include trend identification, seasonal patterns, performance metrics, comparative analysis, and predictive insights. Use clear visualizations where appropriate, provide statistical context, identify key drivers of sales performance, and offer specific recommendations for improvement. Structure your response with clear sections for findings, insights, and actionable next steps.",
+      icon: <MessageSquare className="w-5 h-5" />
+    },
+    {
+      title: "Meal Planning",
+      input: "plan a week of healthy meals",
+      output: "You are a nutritionist and meal planning expert with knowledge of dietary science and culinary arts. Create a comprehensive weekly meal plan that prioritizes nutrition, variety, and practicality. The plan should include balanced macronutrients, diverse food groups, seasonal ingredients, and accommodate common dietary preferences. Provide detailed recipes with nutritional information, shopping lists organized by category, preparation time estimates, and storage recommendations. Consider budget constraints, cooking skill levels, and time availability. Include options for meal prep and leftovers to maximize efficiency.",
+      icon: <ChefHat className="w-5 h-5" />
+    },
+    {
+      title: "Project Planning",
+      input: "organize a marketing campaign",
+      output: "You are a productivity consultant and project manager with expertise in marketing strategy and campaign execution. Develop a comprehensive marketing campaign plan that includes clear objectives, target audience analysis, channel strategy, timeline, budget allocation, and success metrics. The plan should be actionable with specific tasks, deadlines, and responsibilities. Include risk assessment, contingency plans, and performance tracking methods. Provide templates for key deliverables, communication protocols, and evaluation criteria. Structure the response with clear phases, milestones, and measurable outcomes.",
+      icon: <Calendar className="w-5 h-5" />
+    },
+    {
+      title: "Creative Writing",
+      input: "write a short story about time travel",
+      output: "You are a creative professional and storytelling expert with deep understanding of narrative structure and science fiction elements. Write an engaging short story about time travel that explores the complexities of temporal paradoxes, human nature, and the consequences of changing the past. The story should be 1500-2000 words, feature well-developed characters, include vivid descriptions, maintain consistent internal logic, and deliver a satisfying emotional arc. Use creative narrative techniques, build tension effectively, and provide a thought-provoking conclusion that resonates with readers.",
+      icon: <Sparkles className="w-5 h-5" />
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
-      {/* Header */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-teal-500/10 to-purple-500/10 backdrop-blur-3xl"></div>
-        <div className="relative max-w-4xl mx-auto px-4 py-12 text-center">
-          <div className="inline-flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-r from-teal-500/20 to-purple-500/20 rounded-2xl backdrop-blur-sm border border-teal-400/20">
-              <Wand2 className="w-8 h-8 text-teal-300" />
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white">
+      <div className="container mx-auto px-4 py-8">
+        {/* Requests Left Banner */}
+        {requestLimit && (
+          <div className="mb-6 flex justify-center">
+            <div className={`rounded-xl px-6 py-3 text-lg font-semibold shadow-md border-2 ${
+              requestsLeft === 0
+                ? 'bg-red-900/70 border-red-500 text-red-200'
+                : requestsLeft <= 5
+                ? 'bg-yellow-900/70 border-yellow-400 text-yellow-200'
+                : 'bg-teal-900/70 border-teal-500 text-teal-200'
+            }`}>
+              {requestsLeft === 0
+                ? `You have reached your free request limit for this month.`
+                : `You have ${requestsLeft} of ${requestLimit} free requests left this month.`}
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-teal-300 to-purple-300 bg-clip-text text-transparent">
-              PromptCraft
-            </h1>
           </div>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-            Transform your casual ideas into powerful AI prompts. Get better results from ChatGPT, Claude, and other AI assistants.
+        )}
+        {/* Request Error Banner */}
+        {requestError && (
+          <div className="mb-6 flex justify-center">
+            <div className="rounded-xl px-6 py-3 text-lg font-semibold shadow-md border-2 bg-red-900/80 border-red-500 text-red-200">
+              {requestError}
+            </div>
+          </div>
+        )}
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-teal-400 to-purple-400 bg-clip-text text-transparent">
+            Prompt Craft
+          </h1>
+          <p className="text-xl text-gray-300 mb-6">
+            Transform your basic ideas into professional AI prompts
           </p>
+          
+          {/* LLM Status Indicator */}
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="flex items-center gap-2">
+              {llmStatus === 'available' ? (
+                <Zap className="w-4 h-4 text-green-400" />
+              ) : (
+                <Brain className="w-4 h-4 text-yellow-400" />
+              )}
+              <span className="text-sm text-gray-400">
+                {llmStatus === 'available' ? 'LLM Enhanced' : 'Local Enhancement'}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="flex items-center gap-2 px-3 py-1 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg text-sm transition-all"
+            >
+              <SettingsIcon className="w-4 h-4" />
+              Settings
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 pb-12">
-        {/* Input/Output Section */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
+        {/* Main Content */}
+        <div className="grid lg:grid-cols-2 gap-8 mb-12">
           {/* Input */}
           <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-6 border border-gray-700/50">
+            <h3 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-teal-400" />
+              Your Idea
+            </h3>
+            
+            {/* Context Info */}
+            {contextInfo && (
+              <div className="mb-4 bg-blue-900/30 rounded-2xl p-4 border border-blue-600/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Brain className="w-4 h-4 text-blue-400" />
+                  <h4 className="text-sm font-medium text-blue-300">Context Detected</h4>
+                </div>
+                <div className="text-sm text-blue-200">
+                  <p>Intent: <span className="font-medium">{currentIntent?.intent}</span></p>
+                  <p>Confidence: <span className="font-medium">{(currentIntent?.confidence * 100).toFixed(0)}%</span></p>
+                  {contextInfo.recentHistory.length > 0 && (
+                    <p>Using {contextInfo.recentHistory.length} recent interactions for context</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-100 flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-teal-400" />
-                Your Idea
-              </h3>
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowHistory(!showHistory)}
-                  className="p-2 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-lg transition-all"
+                  className={`p-2 rounded-lg transition-all ${
+                    showHistory 
+                      ? 'bg-teal-500/30 text-teal-300' 
+                      : 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50'
+                  }`}
                   title="Show history"
                 >
                   <History className="w-4 h-4" />
                 </button>
+              </div>
+              <div className="flex gap-2">
                 {recordingSupported && (
                   <button
                     onClick={toggleVoiceRecording}
@@ -683,7 +572,7 @@ Please provide a detailed, structured response that addresses all aspects of the
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your idea here... (e.g., 'write a story about space travel')"
+                placeholder="Type your basic idea here... (e.g., 'write a story about space travel', 'analyze sales data', 'create a meal plan')"
                 className="w-full h-40 bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/50 focus:border-transparent transition-all"
               />
             </div>
@@ -718,7 +607,7 @@ Please provide a detailed, structured response that addresses all aspects of the
             <div className="flex gap-3 mt-4">
               <button
                 onClick={generatePrompt}
-                disabled={!input.trim() || isGenerating}
+                disabled={!input.trim() || isGenerating || requestsLeft === 0}
                 className="flex-1 bg-gradient-to-r from-teal-600 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-teal-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
                 {isGenerating ? (
@@ -756,7 +645,14 @@ Please provide a detailed, structured response that addresses all aspects of the
             </h3>
             <div className="bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 h-40 overflow-y-auto">
               {output ? (
-                <p className="text-gray-200 leading-relaxed whitespace-pre-wrap">{output}</p>
+                <div>
+                  <p className="text-gray-200 leading-relaxed whitespace-pre-wrap">{output}</p>
+                  <div className="mt-3 p-2 bg-blue-900/20 border border-blue-600/30 rounded-lg">
+                    <p className="text-xs text-blue-300">
+                      💡 This is an enhanced prompt ready to use with ChatGPT, Claude, or other AI systems. Copy and paste it directly!
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <p className="text-gray-500 italic">Your enhanced prompt will appear here...</p>
               )}
@@ -812,6 +708,12 @@ Please provide a detailed, structured response that addresses all aspects of the
           </p>
         </div>
       </div>
+
+      {/* Settings Modal */}
+      <Settings isOpen={showSettings} onClose={() => {
+        setShowSettings(false);
+        checkLlmStatus(); // Refresh LLM status after settings change
+      }} />
     </div>
   );
 };
