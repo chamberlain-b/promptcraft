@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Wand2, Copy, RefreshCw, Sparkles, MessageSquare, Code, PenTool, Mic, MicOff, Volume2, History, Download, Trash2, ChefHat, Calendar, Lightbulb, Plus, Settings as SettingsIcon, Brain, Zap } from 'lucide-react';
+import { Wand2, Copy, RefreshCw, Sparkles, MessageSquare, Code, PenTool, Mic, MicOff, Volume2, History, Download, Trash2, ChefHat, Calendar, Lightbulb, Plus, Settings as SettingsIcon, Brain, Zap, Palette, Ruler, SlidersHorizontal } from 'lucide-react';
 import llmService from './services/llmService';
 import contextService from './services/contextService';
 import Settings from './components/Settings';
@@ -22,12 +22,26 @@ const PromptGenerator = () => {
   const [requestsLeft, setRequestsLeft] = useState(null);
   const [requestLimit, setRequestLimit] = useState(null);
   const [requestError, setRequestError] = useState(null);
+  const [currentTone, setCurrentTone] = useState('professional');
+  const [currentLength, setCurrentLength] = useState('medium');
+
+  // Silence timer ref
+  const silenceTimerRef = useRef(null);
 
   // Load history from localStorage on component mount
   useEffect(() => {
     const savedHistory = localStorage.getItem('promptcraft-history');
     if (savedHistory) {
       setHistory(JSON.parse(savedHistory));
+    }
+    
+    // Load user preferences for tone and length
+    const userPreferences = contextService.getUserPreferences();
+    if (userPreferences.defaultTone) {
+      setCurrentTone(userPreferences.defaultTone);
+    }
+    if (userPreferences.defaultLength) {
+      setCurrentLength(userPreferences.defaultLength);
     }
     
     // Check LLM status
@@ -78,17 +92,40 @@ const PromptGenerator = () => {
         if (finalTranscript) {
           setInput(prev => prev + ' ' + finalTranscript);
         }
+        // Reset silence timer on any result
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = setTimeout(() => {
+          if (recognitionRef.current && isListening) {
+            recognitionRef.current.stop();
+            setIsListening(false);
+          }
+        }, 5000);
       };
 
       recognitionRef.current.onend = () => {
         setIsListening(false);
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       };
 
       recognitionRef.current.onerror = () => {
         setIsListening(false);
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       };
     }
-  }, []);
+
+    // Page visibility auto-stop
+    const handleVisibility = () => {
+      if (document.hidden && recognitionRef.current && isListening) {
+        recognitionRef.current.stop();
+        setIsListening(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    };
+  }, [isListening]);
 
   // Generate intelligent suggestions based on input
   const generateSuggestions = (text) => {
@@ -286,9 +323,13 @@ const PromptGenerator = () => {
       setCurrentIntent(intentAnalysis);
       // Get enhanced context
       const userPreferences = contextService.getUserPreferences();
-      let context = {};
+      let context = {
+        tone: currentTone,
+        length: currentLength
+      };
       if (userPreferences.enableContext !== false) {
-        context = contextService.getEnhancedContext(input.trim(), intentAnalysis.intent);
+        const enhancedContext = contextService.getEnhancedContext(input.trim(), intentAnalysis.intent);
+        context = { ...enhancedContext, ...context };
         setContextInfo(context);
       }
       // Generate enhanced prompt via backend
@@ -336,6 +377,24 @@ const PromptGenerator = () => {
   const useExample = (example) => {
     setInput(example.input);
     setOutput(example.output);
+    
+    // Set appropriate tone and length based on example type
+    if (example.title === "Content Writing" || example.title === "Creative Writing") {
+      setCurrentTone('professional');
+      setCurrentLength('long');
+    } else if (example.title === "Code Generation") {
+      setCurrentTone('technical');
+      setCurrentLength('comprehensive');
+    } else if (example.title === "Data Analysis") {
+      setCurrentTone('professional');
+      setCurrentLength('comprehensive');
+    } else if (example.title === "Meal Planning") {
+      setCurrentTone('friendly');
+      setCurrentLength('comprehensive');
+    } else if (example.title === "Project Planning") {
+      setCurrentTone('professional');
+      setCurrentLength('comprehensive');
+    }
   };
 
   const clearAll = () => {
@@ -343,6 +402,15 @@ const PromptGenerator = () => {
     setOutput('');
     setCurrentIntent(null);
     setContextInfo(null);
+    
+    // Reset tone and length to defaults
+    const userPreferences = contextService.getUserPreferences();
+    if (userPreferences.defaultTone) {
+      setCurrentTone(userPreferences.defaultTone);
+    }
+    if (userPreferences.defaultLength) {
+      setCurrentLength(userPreferences.defaultLength);
+    }
   };
 
   const loadFromHistory = (historyItem) => {
@@ -466,11 +534,43 @@ const PromptGenerator = () => {
         {/* Main Content */}
         <div className="grid lg:grid-cols-2 gap-8 mb-12">
           {/* Input */}
-          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-6 border border-gray-700/50">
+          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-8 border border-gray-700/50">
             <h3 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-teal-400" />
               Your Idea
             </h3>
+            
+            {/* Prompt Output Style Controls - Single Row, No Icons */}
+            <div className="mb-3 bg-gray-800/30 rounded-2xl p-3 border border-gray-600/30">
+              <div className="flex flex-nowrap items-center gap-x-4">
+                <span className="text-base font-bold text-gray-300 whitespace-nowrap">Output Style:</span>
+                <span className="text-sm font-medium text-gray-200 whitespace-nowrap">Tone</span>
+                <select
+                  value={currentTone}
+                  onChange={(e) => setCurrentTone(e.target.value)}
+                  className="ml-1 px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-transparent transition-all"
+                >
+                  <option value="professional">Professional</option>
+                  <option value="casual">Casual</option>
+                  <option value="formal">Formal</option>
+                  <option value="friendly">Friendly</option>
+                  <option value="academic">Academic</option>
+                  <option value="technical">Technical</option>
+                  <option value="creative">Creative</option>
+                </select>
+                <span className="text-sm font-medium text-gray-200 whitespace-nowrap">Length</span>
+                <select
+                  value={currentLength}
+                  onChange={(e) => setCurrentLength(e.target.value)}
+                  className="ml-1 px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-transparent transition-all"
+                >
+                  <option value="short">Short</option>
+                  <option value="medium">Medium</option>
+                  <option value="long">Long</option>
+                  <option value="comprehensive">Comprehensive</option>
+                </select>
+              </div>
+            </div>
             
             {/* Context Info */}
             {contextInfo && (
@@ -573,7 +673,7 @@ const PromptGenerator = () => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type your basic idea here... (e.g., 'write a story about space travel', 'analyze sales data', 'create a meal plan')"
-                className="w-full h-40 bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/50 focus:border-transparent transition-all"
+                className="w-full h-60 bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/70 focus:border-teal-400 caret-teal-400 transition-all"
               />
             </div>
 
@@ -638,12 +738,12 @@ const PromptGenerator = () => {
           </div>
 
           {/* Output */}
-          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-6 border border-gray-700/50">
+          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-8 border border-gray-700/50">
             <h3 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
               <Wand2 className="w-5 h-5 text-purple-400" />
               Enhanced Prompt
             </h3>
-            <div className="bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 h-40 overflow-y-auto">
+            <div className="bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 h-60 overflow-y-auto">
               {output ? (
                 <div>
                   <p className="text-gray-200 leading-relaxed whitespace-pre-wrap">{output}</p>

@@ -54,37 +54,37 @@ Your response should be:
 • [Criterion 2]
 • [Criterion 3]
 
+IMPORTANT: When context includes tone and length preferences, incorporate them appropriately:
+- TONE: Adjust the language style and formality level (professional, casual, formal, friendly, academic, technical, creative)
+- LENGTH: Adjust the scope and detail level (short, medium, long, comprehensive)
+
 Example transformations:
 
 User input: "write a blog post about AI"
+Context: {"tone": "casual", "length": "short"}
 Your output: 
 **ROLE & EXPERTISE:**
-You are an expert content writer and technology journalist with deep knowledge of artificial intelligence, machine learning, and emerging technologies.
+You are a friendly content creator and tech enthusiast with a knack for making complex topics accessible and engaging.
 
 **TASK OVERVIEW:**
-Create a comprehensive, engaging blog post about artificial intelligence that educates and captivates readers while providing actionable insights.
+Create a casual, concise blog post about artificial intelligence that's perfect for a quick read.
 
 **KEY REQUIREMENTS:**
-• Target length: 800-1200 words
-• Professional yet accessible tone
-• Include current trends and real-world applications
-• Provide actionable insights for readers
-• Use engaging storytelling techniques
+• Target length: 300-500 words
+• Casual, conversational tone
+• Keep it simple and engaging
+• Focus on key points only
 
 **OUTPUT STRUCTURE:**
-• Introduction: Hook readers with compelling opening
-• Current State: Overview of AI development and adoption
-• Key Applications: Real-world examples and use cases
-• Future Implications: Trends and predictions
-• Actionable Insights: Practical takeaways for readers
-• Conclusion: Compelling wrap-up with call to action
+• Brief introduction that hooks readers
+• 2-3 main points about AI
+• Simple conclusion with a fun takeaway
 
 **SPECIFIC GUIDELINES:**
-• Use clear, jargon-free language
-• Include relevant statistics and data
-• Provide concrete examples and case studies
-• Address common misconceptions about AI
-• Maintain engaging narrative flow throughout
+• Use everyday language and relatable examples
+• Avoid technical jargon
+• Keep paragraphs short and punchy
+• Include a conversational tone throughout
 
 **FORMATTING REQUIREMENTS:**
 • Use clear headings and subheadings
@@ -95,42 +95,41 @@ Create a comprehensive, engaging blog post about artificial intelligence that ed
 
 **SUCCESS CRITERIA:**
 Your response should be:
-• Comprehensive and well-researched
-• Engaging and accessible to general audience
-• Actionable with clear next steps
-• Professional yet conversational in tone
-• Well-structured with logical flow
+• Concise and to the point
+• Engaging and easy to read
+• Accessible to general audience
+• Fun and conversational in tone
+• Well-structured but not overwhelming
 
 User input: "explain quantum computing"
+Context: {"tone": "academic", "length": "comprehensive"}
 Your output:
 **ROLE & EXPERTISE:**
-You are a quantum physicist and computer science expert with deep knowledge of quantum computing principles, quantum mechanics, and computational theory.
+You are a distinguished quantum physicist and computational theorist with extensive research experience in quantum computing, quantum mechanics, and theoretical computer science.
 
 **TASK OVERVIEW:**
-Provide a comprehensive yet accessible explanation of quantum computing that demystifies complex concepts for a general audience.
+Provide a comprehensive, academically rigorous explanation of quantum computing that covers theoretical foundations, current developments, and future implications.
 
 **KEY REQUIREMENTS:**
-• Explain fundamental quantum concepts clearly
-• Cover current state of quantum computing technology
-• Discuss potential applications and implications
-• Use analogies to make complex ideas accessible
-• Address common misconceptions
+• Comprehensive coverage of quantum computing principles
+• Academic rigor with proper citations and references
+• Detailed technical explanations with mathematical foundations
+• Thorough analysis of current state and future prospects
 
 **OUTPUT STRUCTURE:**
-• Introduction: What is quantum computing and why it matters
-• Quantum Basics: Key principles and concepts
-• How It Works: Technical explanation with analogies
-• Current State: Existing quantum computers and capabilities
-• Applications: Real-world use cases and potential
-• Challenges: Current limitations and obstacles
-• Future Outlook: Predictions and implications
+• Theoretical foundations and mathematical background
+• Quantum mechanics principles relevant to computing
+• Quantum algorithms and computational models
+• Current technological implementations and limitations
+• Future research directions and implications
+• Comprehensive bibliography and references
 
 **SPECIFIC GUIDELINES:**
-• Use everyday analogies to explain quantum concepts
-• Avoid overly technical jargon
-• Include visual descriptions where helpful
-• Provide historical context and development timeline
-• Compare quantum vs classical computing approaches
+• Use precise technical terminology
+• Include mathematical formulations where appropriate
+• Provide detailed explanations of quantum phenomena
+• Reference current research and developments
+• Maintain academic standards throughout
 
 **FORMATTING REQUIREMENTS:**
 • Use clear headings and subheadings
@@ -141,11 +140,11 @@ Provide a comprehensive yet accessible explanation of quantum computing that dem
 
 **SUCCESS CRITERIA:**
 Your response should be:
-• Accessible to non-technical readers
-• Comprehensive in coverage
-• Accurate in technical details
-• Engaging and educational
-• Well-organized with clear progression
+• Academically rigorous and comprehensive
+• Technically accurate and detailed
+• Well-researched with proper citations
+• Suitable for advanced academic audience
+• Thoroughly structured with logical progression
 
 Remember: Always create a structured prompt with clear sections, bullet points, and formatting. Never provide the actual answer or analysis.`;
 

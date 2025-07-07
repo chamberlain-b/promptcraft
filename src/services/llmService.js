@@ -49,7 +49,7 @@ class LLMService {
     // Extract key information from input
     const intent = this.detectIntent(lowerInput);
     const requirements = this.extractRequirements(userInput);
-    const constraints = this.generateConstraints(intent, requirements);
+    const constraints = this.generateConstraints(intent, requirements, context);
     const format = this.generateFormat(intent, requirements);
     
     return this.buildPrompt(userInput, intent, requirements, constraints, format, context);
@@ -154,13 +154,40 @@ class LLMService {
     return requirements;
   }
 
-  generateConstraints(intent, requirements) {
+  generateConstraints(intent, requirements, context = {}) {
     const constraints = [];
+    
+    // Handle tone from context or requirements
+    const tone = context.tone || requirements.tone || 'professional';
+    const length = context.length || requirements.length || 'medium';
+    
+    // Add tone constraint
+    constraints.push(`• Tone: ${tone.charAt(0).toUpperCase() + tone.slice(1)}`);
+    
+    // Add length constraint based on length preference
+    switch (length) {
+      case 'short':
+        constraints.push('• Target length: 200-400 words');
+        break;
+      case 'medium':
+        constraints.push('• Target length: 500-800 words');
+        break;
+      case 'long':
+        constraints.push('• Target length: 800-1200 words');
+        break;
+      case 'comprehensive':
+        constraints.push('• Target length: 1200+ words');
+        break;
+      default:
+        if (requirements.length) {
+          constraints.push(`• Target length: ${requirements.length.amount} ${requirements.length.unit}`);
+        } else {
+          constraints.push('• Target length: 500-800 words');
+        }
+    }
     
     switch (intent) {
       case 'writing':
-        if (!requirements.length) constraints.push('• Target length: 500-800 words');
-        if (!requirements.tone) constraints.push('• Tone: Professional yet engaging');
         constraints.push('• Include engaging introduction and conclusion');
         constraints.push('• Use clear structure with headings');
         break;
@@ -212,7 +239,7 @@ class LLMService {
   }
 
   buildPrompt(userInput, intent, requirements, constraints, format, context) {
-    const role = this.getRole(intent);
+    const role = this.getRole(intent, context);
     const contextInfo = this.getContextInfo(context);
     
     let prompt = `You are an expert ${role}. ${contextInfo}
@@ -249,7 +276,7 @@ Please provide a detailed, structured response that addresses all aspects of the
     return prompt;
   }
 
-  getRole(intent) {
+  getRole(intent, context = {}) {
     const roles = {
       'writing': 'content writer and storyteller',
       'coding': 'software engineer and technical mentor',
@@ -281,6 +308,8 @@ Please provide a detailed, structured response that addresses all aspects of the
     if (context.audience) contextParts.push(`target audience: ${context.audience}`);
     if (context.language) contextParts.push(`programming language: ${context.language}`);
     if (context.topic) contextParts.push(`topic focus: ${context.topic}`);
+    if (context.tone) contextParts.push(`tone: ${context.tone}`);
+    if (context.length) contextParts.push(`length: ${context.length}`);
     
     return contextInfo + contextParts.join(', ') + '.';
   }
