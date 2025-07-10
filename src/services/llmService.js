@@ -10,6 +10,7 @@ class LLMService {
     try {
       // Get API key from localStorage if available
       const apiKey = localStorage.getItem('openai-api-key');
+      console.log('API Key from localStorage:', apiKey ? 'Present' : 'Not present');
       
       const requestBody = {
         prompt: userInput,
@@ -19,9 +20,11 @@ class LLMService {
       // Include API key in request if available
       if (apiKey) {
         requestBody.apiKey = apiKey;
+        console.log('Including API key in request');
       }
       
       const response = await axios.post('/api/generate', requestBody);
+      console.log('API Response enhanced status:', response.data.enhanced);
       return {
         output: response.data.result,
         requestsLeft: response.data.requestsLeft,

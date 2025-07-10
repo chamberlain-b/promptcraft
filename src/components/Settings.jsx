@@ -10,6 +10,7 @@ const Settings = ({ isOpen, onClose }) => {
     enableSuggestions: true,
     autoSave: true
   });
+  const [apiKey, setApiKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -18,6 +19,12 @@ const Settings = ({ isOpen, onClose }) => {
       // Load current settings
       const savedPreferences = contextService.getUserPreferences();
       setPreferences(prev => ({ ...prev, ...savedPreferences }));
+      
+      // Load API key from localStorage
+      const savedApiKey = localStorage.getItem('openai-api-key');
+      if (savedApiKey) {
+        setApiKey(savedApiKey);
+      }
     }
   }, [isOpen]);
 
@@ -28,6 +35,13 @@ const Settings = ({ isOpen, onClose }) => {
     try {
       // Save preferences
       contextService.updateUserPreferences(preferences);
+      
+      // Save API key to localStorage
+      if (apiKey.trim()) {
+        localStorage.setItem('openai-api-key', apiKey.trim());
+      } else {
+        localStorage.removeItem('openai-api-key');
+      }
       
       setMessage('Settings saved successfully!');
       setTimeout(() => setMessage(''), 3000);
@@ -132,6 +146,36 @@ const Settings = ({ isOpen, onClose }) => {
                 <option value="long">Long</option>
                 <option value="comprehensive">Comprehensive</option>
               </select>
+            </div>
+          </div>
+        </div>
+
+        {/* API Configuration */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-purple-300">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/>
+              <path d="m21 2-9.6 9.6"/>
+              <circle cx="7.5" cy="15.5" r="5.5"/>
+            </svg>
+            OpenAI API Configuration
+          </h3>
+          <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+            <label className="block text-sm font-medium mb-2 text-gray-200">
+              OpenAI API Key
+              <span className="text-xs text-gray-400 ml-2">(for enhanced AI prompts)</span>
+            </label>
+            <input
+              type="password"
+              placeholder="sk-..."
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            <div className="mt-2 text-xs text-gray-400">
+              <p>• Your API key is stored locally and never sent to our servers</p>
+              <p>• Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline">OpenAI Platform</a></p>
+              <p>• Without an API key, the app uses local enhancement mode</p>
             </div>
           </div>
         </div>

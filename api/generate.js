@@ -184,6 +184,8 @@ export default async function handler(req, res) {
   try {
     const { prompt, context, apiKey } = req.body;
     console.log('User input received:', prompt);
+    console.log('API Key provided:', apiKey ? 'Yes' : 'No');
+    console.log('Environment API Key:', process.env.OPENAI_API_KEY ? 'Yes' : 'No');
     console.log('IP:', ip, 'MonthKey:', monthKey, 'UsageKey:', usageKey, 'Current usage:', usage[usageKey]);
     
     if (!prompt) {
@@ -195,11 +197,13 @@ export default async function handler(req, res) {
 
     // Check for API key - first from request body, then from environment
     const effectiveApiKey = apiKey || process.env.OPENAI_API_KEY;
+    console.log('Effective API Key available:', effectiveApiKey ? 'Yes' : 'No');
     
     if (effectiveApiKey) {
       // Initialize OpenAI with the available API key
       const openaiInstance = new OpenAI({ apiKey: effectiveApiKey });
       useOpenAI = true;
+      console.log('Using OpenAI API for enhancement');
       
       try {
         // Use OpenAI API
@@ -273,14 +277,18 @@ Original request: "${prompt}"`;
         }
       } catch (openaiError) {
         console.error('OpenAI API Error:', openaiError);
+        console.log('Falling back to local enhancement');
         // Fall back to local enhancement if OpenAI fails
         useOpenAI = false;
         result = generateLocalEnhancement(prompt, context);
       }
     } else {
       // No API key available, use local enhancement
+      console.log('No API key available, using local enhancement');
       result = generateLocalEnhancement(prompt, context);
     }
+    
+    console.log('Final enhancement method used:', useOpenAI ? 'OpenAI' : 'Local');
     
     usage[usageKey]++;
     res.json({
