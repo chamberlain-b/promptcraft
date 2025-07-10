@@ -8,14 +8,25 @@ class LLMService {
 
   async generateEnhancedPrompt(userInput, context = {}) {
     try {
-      const response = await axios.post('/api/generate', {
+      // Get API key from localStorage if available
+      const apiKey = localStorage.getItem('openai-api-key');
+      
+      const requestBody = {
         prompt: userInput,
         context
-      });
+      };
+      
+      // Include API key in request if available
+      if (apiKey) {
+        requestBody.apiKey = apiKey;
+      }
+      
+      const response = await axios.post('/api/generate', requestBody);
       return {
         output: response.data.result,
         requestsLeft: response.data.requestsLeft,
         limit: response.data.limit,
+        enhanced: response.data.enhanced,
         error: null
       };
     } catch (error) {

@@ -336,6 +336,14 @@ const PromptGenerator = () => {
       const result = await llmService.generateEnhancedPrompt(input.trim(), context);
       setRequestsLeft(result.requestsLeft);
       setRequestLimit(result.limit);
+      
+      // Update LLM status based on whether enhancement was used
+      if (result.enhanced) {
+        setLlmStatus('enhanced');
+      } else {
+        setLlmStatus('local');
+      }
+      
       if (result.error) {
         setRequestError(result.error);
         setOutput('');
@@ -512,14 +520,27 @@ const PromptGenerator = () => {
           {/* LLM Status Indicator */}
           <div className="flex items-center justify-center gap-4 mb-4">
             <div className="flex items-center gap-2">
-              {llmStatus === 'available' ? (
-                <Zap className="w-4 h-4 text-green-400" />
+              {llmStatus === 'enhanced' ? (
+                <>
+                  <Zap className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-green-400">AI Enhanced</span>
+                </>
+              ) : llmStatus === 'local' ? (
+                <>
+                  <Brain className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm text-blue-400">Local Enhancement</span>
+                </>
+              ) : llmStatus === 'available' ? (
+                <>
+                  <Zap className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-green-400">AI Ready</span>
+                </>
               ) : (
-                <Brain className="w-4 h-4 text-yellow-400" />
+                <>
+                  <Brain className="w-4 h-4 text-yellow-400" />
+                  <span className="text-sm text-yellow-400">Local Mode</span>
+                </>
               )}
-              <span className="text-sm text-gray-400">
-                {llmStatus === 'available' ? 'LLM Enhanced' : 'Local Enhancement'}
-              </span>
             </div>
             <button
               onClick={() => setShowSettings(true)}
@@ -532,9 +553,9 @@ const PromptGenerator = () => {
         </div>
 
         {/* Main Content */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-7xl mx-auto overflow-hidden">
           {/* Input */}
-          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-6 border border-gray-700/50 flex flex-col h-[600px]">
+          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-6 border border-gray-700/50 flex flex-col h-[600px] card-container">
             <h3 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-teal-400" />
               Your Idea
@@ -674,12 +695,12 @@ const PromptGenerator = () => {
               </div>
             )}
             
-            <div className="relative flex-1">
+            <div className="relative flex-1 card-container">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type your basic idea here... (e.g., 'write a story about space travel', 'analyze sales data', 'create a meal plan')"
-                className="w-full h-full min-h-[240px] bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/70 focus:border-teal-400 caret-teal-400 transition-all break-words whitespace-pre-wrap overflow-wrap-anywhere overflow-y-auto custom-scrollbar"
+                className="w-full h-full min-h-[240px] bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/70 focus:border-teal-400 caret-teal-400 transition-all textarea-container overflow-y-auto custom-scrollbar"
               />
             </div>
 
@@ -744,19 +765,19 @@ const PromptGenerator = () => {
           </div>
 
           {/* Output */}
-          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-6 border border-gray-700/50 flex flex-col h-[600px]">
+          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-6 border border-gray-700/50 flex flex-col h-[600px] card-container">
             <h3 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
               <Wand2 className="w-5 h-5 text-purple-400" />
               Enhanced Prompt
             </h3>
-            <div className="bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 flex-1 flex flex-col">
+            <div className="bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 flex-1 flex flex-col card-container">
               <div className="flex-1 min-h-[240px] overflow-y-auto custom-scrollbar">
                 {output ? (
                   <div className="h-full flex flex-col">
                     <div className="flex-1">
-                      <p className="text-gray-200 leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere">{output}</p>
+                      <p className="text-gray-200 leading-relaxed text-container">{output}</p>
                       <div className="mt-3 p-2 bg-blue-900/20 border border-blue-600/30 rounded-lg">
-                        <p className="text-xs text-blue-300 break-words">
+                        <p className="text-xs text-blue-300 text-container">
                           💡 This is an enhanced prompt ready to use with ChatGPT, Claude, or other AI systems. Copy and paste it directly!
                         </p>
                       </div>

@@ -156,7 +156,7 @@ export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-API-Key');
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
@@ -182,7 +182,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, context } = req.body;
+    const { prompt, context, apiKey } = req.body;
     console.log('User input received:', prompt);
     console.log('IP:', ip, 'MonthKey:', monthKey, 'UsageKey:', usageKey, 'Current usage:', usage[usageKey]);
     
@@ -191,31 +191,39 @@ export default async function handler(req, res) {
     }
 
     let result;
+    let useOpenAI = false;
 
-    // Check if OpenAI is available
-    if (openai) {
-      // Use OpenAI API
-      let userMessage = `Transform this user request into a professional prompt for an AI system. DO NOT answer the question - create a prompt that someone would use to get an AI to answer it:\n\n"${prompt}"`;
+    // Check for API key - first from request body, then from environment
+    const effectiveApiKey = apiKey || process.env.OPENAI_API_KEY;
+    
+    if (effectiveApiKey) {
+      // Initialize OpenAI with the available API key
+      const openaiInstance = new OpenAI({ apiKey: effectiveApiKey });
+      useOpenAI = true;
       
-      if (context && Object.keys(context).length > 0) {
-        userMessage += `\n\nAdditional context to consider:\n${JSON.stringify(context, null, 2)}`;
-      }
+      try {
+        // Use OpenAI API
+        let userMessage = `Transform this user request into a professional prompt for an AI system. DO NOT answer the question - create a prompt that someone would use to get an AI to answer it:\n\n"${prompt}"`;
+        
+        if (context && Object.keys(context).length > 0) {
+          userMessage += `\n\nAdditional context to consider:\n${JSON.stringify(context, null, 2)}`;
+        }
 
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: ENHANCED_PROMPT_SYSTEM },
-          { role: 'user', content: userMessage }
-        ],
-        max_tokens: 1500,
-        temperature: 0.7
-      });
-      
-      result = completion.choices[0].message.content;
-      
-      // Validate that the output is actually a structured prompt
-      if (!result.trim().toLowerCase().includes('**role & expertise:**')) {
-        const retryMessage = `The previous response was not properly structured. Please create a structured prompt that follows this exact format:
+        const completion = await openaiInstance.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: ENHANCED_PROMPT_SYSTEM },
+            { role: 'user', content: userMessage }
+          ],
+          max_tokens: 1500,
+          temperature: 0.7
+        });
+        
+        result = completion.choices[0].message.content;
+        
+        // Validate that the output is actually a structured prompt
+        if (!result.trim().toLowerCase().includes('**role & expertise:**')) {
+          const retryMessage = `The previous response was not properly structured. Please create a structured prompt that follows this exact format:
 
 **ROLE & EXPERTISE:**
 You are [specific expert role] with [relevant expertise].
@@ -250,21 +258,27 @@ Your response should be:
 DO NOT provide the answer to the question - create a structured prompt that someone would use to get an AI to answer it.
 
 Original request: "${prompt}"`;
-        
-        const retryCompletion = await openai.chat.completions.create({
-          model: 'gpt-4o',
-          messages: [
-            { role: 'system', content: ENHANCED_PROMPT_SYSTEM },
-            { role: 'user', content: retryMessage }
-          ],
-          max_tokens: 1500,
-          temperature: 0.3
-        });
-        
-        result = retryCompletion.choices[0].message.content;
+          
+          const retryCompletion = await openaiInstance.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [
+              { role: 'system', content: ENHANCED_PROMPT_SYSTEM },
+              { role: 'user', content: retryMessage }
+            ],
+            max_tokens: 1500,
+            temperature: 0.3
+          });
+          
+          result = retryCompletion.choices[0].message.content;
+        }
+      } catch (openaiError) {
+        console.error('OpenAI API Error:', openaiError);
+        // Fall back to local enhancement if OpenAI fails
+        useOpenAI = false;
+        result = generateLocalEnhancement(prompt, context);
       }
     } else {
-      // Fallback to local enhancement when OpenAI is not available
+      // No API key available, use local enhancement
       result = generateLocalEnhancement(prompt, context);
     }
     
@@ -272,29 +286,27 @@ Original request: "${prompt}"`;
     res.json({
       result: result,
       requestsLeft: REQUEST_LIMIT - usage[usageKey],
-      limit: REQUEST_LIMIT
+      limit: REQUEST_LIMIT,
+      enhanced: useOpenAI
     });
   } catch (err) {
     console.error('Error in /api/generate:', err.stack || err);
     
-    // If OpenAI fails, try local enhancement as fallback
-    if (openai) {
-      try {
-        const { prompt } = req.body;
-        const result = generateLocalEnhancement(prompt, req.body.context || {});
-        usage[usageKey]++;
-        res.json({
-          result: result,
-          requestsLeft: REQUEST_LIMIT - usage[usageKey],
-          limit: REQUEST_LIMIT
-        });
-        return;
-      } catch (fallbackErr) {
-        console.error('Fallback also failed:', fallbackErr);
-      }
+    // Final fallback to local enhancement
+    try {
+      const { prompt, context } = req.body;
+      const result = generateLocalEnhancement(prompt, context || {});
+      usage[usageKey]++;
+      res.json({
+        result: result,
+        requestsLeft: REQUEST_LIMIT - usage[usageKey],
+        limit: REQUEST_LIMIT,
+        enhanced: false
+      });
+    } catch (fallbackErr) {
+      console.error('Fallback also failed:', fallbackErr);
+      res.status(500).json({ error: 'Service temporarily unavailable. Please try again later.' });
     }
-    
-    res.status(500).json({ error: err.message });
   }
 }
 
