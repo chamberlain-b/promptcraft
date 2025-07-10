@@ -1,6 +1,10 @@
 import { OpenAI } from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Initialize OpenAI only if API key is available
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 // In-memory usage tracking (Note: this will reset on each function invocation)
 // For production, you'd want to use a database or Redis
@@ -186,29 +190,32 @@ export default async function handler(req, res) {
       throw new Error('No prompt provided in request body.');
     }
 
-    // Create the user message with context if available
-    let userMessage = `Transform this user request into a professional prompt for an AI system. DO NOT answer the question - create a prompt that someone would use to get an AI to answer it:\n\n"${prompt}"`;
-    
-    if (context && Object.keys(context).length > 0) {
-      userMessage += `\n\nAdditional context to consider:\n${JSON.stringify(context, null, 2)}`;
-    }
+    let result;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: ENHANCED_PROMPT_SYSTEM },
-        { role: 'user', content: userMessage }
-      ],
-      max_tokens: 1500,
-      temperature: 0.7
-    });
-    
-    let result = completion.choices[0].message.content;
-    
-    // Validate that the output is actually a structured prompt (starts with "**ROLE & EXPERTISE:**")
-    if (!result.trim().toLowerCase().includes('**role & expertise:**')) {
-      // If it's not a structured prompt, try again with stronger instructions
-      const retryMessage = `The previous response was not properly structured. Please create a structured prompt that follows this exact format:
+    // Check if OpenAI is available
+    if (openai) {
+      // Use OpenAI API
+      let userMessage = `Transform this user request into a professional prompt for an AI system. DO NOT answer the question - create a prompt that someone would use to get an AI to answer it:\n\n"${prompt}"`;
+      
+      if (context && Object.keys(context).length > 0) {
+        userMessage += `\n\nAdditional context to consider:\n${JSON.stringify(context, null, 2)}`;
+      }
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: ENHANCED_PROMPT_SYSTEM },
+          { role: 'user', content: userMessage }
+        ],
+        max_tokens: 1500,
+        temperature: 0.7
+      });
+      
+      result = completion.choices[0].message.content;
+      
+      // Validate that the output is actually a structured prompt
+      if (!result.trim().toLowerCase().includes('**role & expertise:**')) {
+        const retryMessage = `The previous response was not properly structured. Please create a structured prompt that follows this exact format:
 
 **ROLE & EXPERTISE:**
 You are [specific expert role] with [relevant expertise].
@@ -243,18 +250,22 @@ Your response should be:
 DO NOT provide the answer to the question - create a structured prompt that someone would use to get an AI to answer it.
 
 Original request: "${prompt}"`;
-      
-      const retryCompletion = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: ENHANCED_PROMPT_SYSTEM },
-          { role: 'user', content: retryMessage }
-        ],
-        max_tokens: 1500,
-        temperature: 0.3
-      });
-      
-      result = retryCompletion.choices[0].message.content;
+        
+        const retryCompletion = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: ENHANCED_PROMPT_SYSTEM },
+            { role: 'user', content: retryMessage }
+          ],
+          max_tokens: 1500,
+          temperature: 0.3
+        });
+        
+        result = retryCompletion.choices[0].message.content;
+      }
+    } else {
+      // Fallback to local enhancement when OpenAI is not available
+      result = generateLocalEnhancement(prompt, context);
     }
     
     usage[usageKey]++;
@@ -265,6 +276,99 @@ Original request: "${prompt}"`;
     });
   } catch (err) {
     console.error('Error in /api/generate:', err.stack || err);
+    
+    // If OpenAI fails, try local enhancement as fallback
+    if (openai) {
+      try {
+        const { prompt } = req.body;
+        const result = generateLocalEnhancement(prompt, req.body.context || {});
+        usage[usageKey]++;
+        res.json({
+          result: result,
+          requestsLeft: REQUEST_LIMIT - usage[usageKey],
+          limit: REQUEST_LIMIT
+        });
+        return;
+      } catch (fallbackErr) {
+        console.error('Fallback also failed:', fallbackErr);
+      }
+    }
+    
     res.status(500).json({ error: err.message });
   }
-} 
+}
+
+// Local enhancement function as fallback
+function generateLocalEnhancement(userInput, context = {}) {
+  const lowerInput = userInput.toLowerCase();
+  const { tone = 'professional', length = 'medium' } = context;
+  
+  // Detect intent and domain
+  let domain = 'general';
+  let role = 'expert assistant';
+  
+  if (lowerInput.includes('write') || lowerInput.includes('blog') || lowerInput.includes('article')) {
+    domain = 'writing';
+    role = 'professional content writer and editor';
+  } else if (lowerInput.includes('code') || lowerInput.includes('program') || lowerInput.includes('develop')) {
+    domain = 'coding';
+    role = 'senior software engineer and technical mentor';
+  } else if (lowerInput.includes('analyze') || lowerInput.includes('data') || lowerInput.includes('research')) {
+    domain = 'analysis';
+    role = 'data analyst and research specialist';
+  } else if (lowerInput.includes('design') || lowerInput.includes('ui') || lowerInput.includes('ux')) {
+    domain = 'design';
+    role = 'professional designer and user experience expert';
+  } else if (lowerInput.includes('business') || lowerInput.includes('strategy') || lowerInput.includes('marketing')) {
+    domain = 'business';
+    role = 'business strategist and marketing expert';
+  } else if (lowerInput.includes('teach') || lowerInput.includes('explain') || lowerInput.includes('learn')) {
+    domain = 'education';
+    role = 'educational specialist and expert instructor';
+  }
+
+  // Generate structured prompt
+  const enhancedPrompt = `**ROLE & EXPERTISE:**
+You are a ${role} with extensive experience in ${domain}. You have deep knowledge of best practices, current trends, and proven methodologies in your field.
+
+**TASK OVERVIEW:**
+${userInput.charAt(0).toUpperCase() + userInput.slice(1).replace(/\.$/, '')} with ${tone} tone and ${length} detail level.
+
+**KEY REQUIREMENTS:**
+• Follow ${tone} communication style throughout
+• Provide ${length === 'short' ? 'concise and focused' : length === 'medium' ? 'balanced and comprehensive' : length === 'long' ? 'detailed and thorough' : 'exhaustive and comprehensive'} coverage
+• Include relevant examples and practical applications
+• Ensure accuracy and up-to-date information
+• Structure content for easy understanding
+
+**OUTPUT STRUCTURE:**
+• Clear introduction and overview
+• Main content organized in logical sections
+• Supporting details and examples
+• Practical recommendations or next steps
+• Summary or conclusion
+
+**SPECIFIC GUIDELINES:**
+• Use ${tone === 'formal' ? 'formal language and academic tone' : tone === 'casual' ? 'conversational and approachable language' : tone === 'technical' ? 'precise technical terminology' : tone === 'friendly' ? 'warm and engaging language' : tone === 'academic' ? 'scholarly and research-based approach' : tone === 'creative' ? 'imaginative and innovative language' : 'clear, professional communication'}
+• Include specific examples where relevant
+• Provide actionable insights and recommendations
+• Consider different perspectives and approaches
+• Maintain focus on the core objective
+
+**FORMATTING REQUIREMENTS:**
+• Use clear headings and subheadings
+• Include bullet points for key information
+• Provide numbered lists for steps or processes
+• Use bold text for important concepts
+• Structure content in logical sections
+
+**SUCCESS CRITERIA:**
+Your response should be:
+• Well-organized and easy to follow
+• Comprehensive yet focused on key points
+• Practically applicable and actionable
+• Appropriate for the intended ${tone} tone
+• Delivered at the requested ${length} detail level`;
+
+  return enhancedPrompt;
+}

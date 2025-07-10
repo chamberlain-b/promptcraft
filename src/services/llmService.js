@@ -19,6 +19,8 @@ class LLMService {
         error: null
       };
     } catch (error) {
+      console.error('API Error:', error);
+      
       if (error.response && error.response.status === 429) {
         return {
           output: null,
@@ -27,11 +29,21 @@ class LLMService {
           error: error.response.data.error || 'Monthly free request limit reached.'
         };
       }
+      
+      if (error.response && error.response.status === 500) {
+        return {
+          output: null,
+          requestsLeft: null,
+          limit: null,
+          error: 'Service temporarily unavailable. This may be due to API configuration. The service is running in fallback mode.'
+        };
+      }
+      
       return {
         output: null,
         requestsLeft: null,
         limit: null,
-        error: error.message || 'An error occurred.'
+        error: error.response?.data?.error || error.message || 'An error occurred.'
       };
     }
   }
