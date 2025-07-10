@@ -37,17 +37,6 @@ const Settings = ({ isOpen, onClose }) => {
     setIsSaving(false);
     setTimeout(() => setMessage(''), 3000);
   };
-        localStorage.removeItem('openai-api-key');
-        setMessage('Settings saved successfully! API key removed.');
-      }
-      
-      setTimeout(() => setMessage(''), 3000);
-    } catch (error) {
-      setMessage('Error saving settings: ' + error.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleExportData = () => {
     try {
