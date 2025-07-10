@@ -182,9 +182,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, context, apiKey } = req.body;
+    const { prompt, context } = req.body;
     console.log('User input received:', prompt);
-    console.log('API Key provided:', apiKey ? 'Yes' : 'No');
     console.log('Environment API Key:', process.env.OPENAI_API_KEY ? 'Yes' : 'No');
     console.log('IP:', ip, 'MonthKey:', monthKey, 'UsageKey:', usageKey, 'Current usage:', usage[usageKey]);
     
@@ -195,8 +194,8 @@ export default async function handler(req, res) {
     let result;
     let useOpenAI = false;
 
-    // Check for API key - first from request body, then from environment
-    const effectiveApiKey = apiKey || process.env.OPENAI_API_KEY;
+    // Use environment API key only
+    const effectiveApiKey = process.env.OPENAI_API_KEY;
     console.log('Effective API Key available:', effectiveApiKey ? 'Yes' : 'No');
     
     if (effectiveApiKey) {
@@ -213,20 +212,37 @@ export default async function handler(req, res) {
           userMessage += `\n\nAdditional context to consider:\n${JSON.stringify(context, null, 2)}`;
         }
 
-        const completion = await openaiInstance.chat.completions.create({
-          model: 'gpt-4o',
-          messages: [
-            { role: 'system', content: ENHANCED_PROMPT_SYSTEM },
-            { role: 'user', content: userMessage }
-          ],
-          max_tokens: 1500,
-          temperature: 0.7
-        });
+        console.log('Attempting OpenAI API call with model: gpt-4o');
+        let completion;
+        try {
+          completion = await openaiInstance.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [
+              { role: 'system', content: ENHANCED_PROMPT_SYSTEM },
+              { role: 'user', content: userMessage }
+            ],
+            max_tokens: 1500,
+            temperature: 0.7
+          });
+        } catch (modelError) {
+          console.log('gpt-4o failed, trying gpt-4-turbo as fallback');
+          completion = await openaiInstance.chat.completions.create({
+            model: 'gpt-4-turbo',
+            messages: [
+              { role: 'system', content: ENHANCED_PROMPT_SYSTEM },
+              { role: 'user', content: userMessage }
+            ],
+            max_tokens: 1500,
+            temperature: 0.7
+          });
+        }
         
         result = completion.choices[0].message.content;
+        console.log('OpenAI API call successful');
         
         // Validate that the output is actually a structured prompt
         if (!result.trim().toLowerCase().includes('**role & expertise:**')) {
+          console.log('Result not properly structured, retrying with stronger instructions');
           const retryMessage = `The previous response was not properly structured. Please create a structured prompt that follows this exact format:
 
 **ROLE & EXPERTISE:**
@@ -274,9 +290,16 @@ Original request: "${prompt}"`;
           });
           
           result = retryCompletion.choices[0].message.content;
+          console.log('Retry OpenAI API call successful');
         }
       } catch (openaiError) {
-        console.error('OpenAI API Error:', openaiError);
+        console.error('OpenAI API Error Details:', {
+          message: openaiError.message,
+          status: openaiError.status,
+          code: openaiError.code,
+          type: openaiError.type,
+          response: openaiError.response?.data
+        });
         console.log('Falling back to local enhancement');
         // Fall back to local enhancement if OpenAI fails
         useOpenAI = false;

@@ -21,9 +21,11 @@ const PromptGenerator = () => {
   const recognitionRef = useRef(null);
   const [requestsLeft, setRequestsLeft] = useState(null);
   const [requestLimit, setRequestLimit] = useState(null);
-  const [requestError, setRequestError] = useState(null);
   const [currentTone, setCurrentTone] = useState('professional');
   const [currentLength, setCurrentLength] = useState('medium');
+
+  // Text area ref for auto-expand
+  const textareaRef = useRef(null);
 
   // Silence timer ref
   const silenceTimerRef = useRef(null);
@@ -43,9 +45,6 @@ const PromptGenerator = () => {
     if (userPreferences.defaultLength) {
       setCurrentLength(userPreferences.defaultLength);
     }
-    
-    // Check LLM status
-    checkLlmStatus();
   }, []);
 
   // Save history to localStorage whenever it changes
@@ -64,13 +63,20 @@ const PromptGenerator = () => {
     }
   }, [input]);
 
-  const checkLlmStatus = () => {
-    const apiKey = localStorage.getItem('openai-api-key');
-    if (apiKey) {
-      setLlmStatus('available');
-    } else {
-      setLlmStatus('unavailable');
+  // Auto-expand textarea function
+  const autoExpandTextarea = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      const newHeight = Math.min(Math.max(textarea.scrollHeight, 120), 400);
+      textarea.style.height = newHeight + 'px';
     }
+  };
+
+  // Handle input change with auto-expand
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+    setTimeout(autoExpandTextarea, 0);
   };
 
   useEffect(() => {
@@ -315,7 +321,6 @@ const PromptGenerator = () => {
     setIsGenerating(true);
     setCurrentIntent(null);
     setContextInfo(null);
-    setRequestError(null);
 
     try {
       // Analyze intent first
@@ -344,12 +349,6 @@ const PromptGenerator = () => {
         setLlmStatus('local');
       }
       
-      if (result.error) {
-        setRequestError(result.error);
-        setOutput('');
-        setIsGenerating(false);
-        return;
-      }
       setOutput(result.output);
       // Add to context service history
       if (userPreferences.autoSave !== false) {
@@ -497,14 +496,6 @@ const PromptGenerator = () => {
               {requestsLeft === 0
                 ? `You have reached your free request limit for this month.`
                 : `You have ${requestsLeft} of ${requestLimit} free requests left this month.`}
-            </div>
-          </div>
-        )}
-        {/* Request Error Banner */}
-        {requestError && (
-          <div className="mb-6 flex justify-center">
-            <div className="rounded-xl px-6 py-3 text-lg font-semibold shadow-md border-2 bg-red-900/80 border-red-500 text-red-200">
-              {requestError}
             </div>
           </div>
         )}
@@ -697,10 +688,12 @@ const PromptGenerator = () => {
             
             <div className="relative flex-1 card-container">
               <textarea
+                ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleInputChange}
                 placeholder="Type your basic idea here... (e.g., 'write a story about space travel', 'analyze sales data', 'create a meal plan')"
-                className="w-full h-full min-h-[240px] bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/70 focus:border-teal-400 caret-teal-400 transition-all textarea-container overflow-y-auto custom-scrollbar"
+                className="w-full auto-expand-textarea bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/70 focus:border-teal-400 caret-teal-400 transition-all textarea-container custom-scrollbar"
+                style={{ minHeight: '120px', maxHeight: '400px' }}
               />
             </div>
 

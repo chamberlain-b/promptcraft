@@ -8,20 +8,10 @@ class LLMService {
 
   async generateEnhancedPrompt(userInput, context = {}) {
     try {
-      // Get API key from localStorage if available
-      const apiKey = localStorage.getItem('openai-api-key');
-      console.log('API Key from localStorage:', apiKey ? 'Present' : 'Not present');
-      
       const requestBody = {
         prompt: userInput,
         context
       };
-      
-      // Include API key in request if available
-      if (apiKey) {
-        requestBody.apiKey = apiKey;
-        console.log('Including API key in request');
-      }
       
       const response = await axios.post('/api/generate', requestBody);
       console.log('API Response enhanced status:', response.data.enhanced);
@@ -45,11 +35,13 @@ class LLMService {
       }
       
       if (error.response && error.response.status === 500) {
+        const errorMessage = error.response?.data?.error || 'Service temporarily unavailable';
+        console.error('Server error details:', error.response.data);
         return {
           output: null,
           requestsLeft: null,
           limit: null,
-          error: 'Service temporarily unavailable. This may be due to API configuration. The service is running in fallback mode.'
+          error: `API Configuration Error: ${errorMessage}. Please check your API key in Settings.`
         };
       }
       

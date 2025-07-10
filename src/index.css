@@ -97,3 +97,19 @@
   overflow-wrap: break-word;
   word-wrap: break-word;
 }
+
+/* Auto-expanding textarea */
+.auto-expand-textarea {
+  field-sizing: content;
+  min-height: 120px;
+  max-height: 400px;
+  transition: height 0.2s ease;
+  resize: none;
+}
+
+/* Fallback for browsers that don't support field-sizing */
+@supports not (field-sizing: content) {
+  .auto-expand-textarea {
+    overflow-y: auto;
+  }
+}
