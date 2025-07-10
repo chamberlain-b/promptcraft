@@ -13,8 +13,20 @@ class LLMService {
         context
       };
       
-      const response = await axios.post('/api/generate', requestBody);
-      console.log('API Response enhanced status:', response.data.enhanced);
+      console.log('Sending request for AI enhancement...');
+      const response = await axios.post('/api/generate', requestBody, {
+        timeout: 30000, // 30 second timeout
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('API Response received:', {
+        enhanced: response.data.enhanced,
+        hasResult: !!response.data.result,
+        requestsLeft: response.data.requestsLeft
+      });
+      
       return {
         output: response.data.result,
         requestsLeft: response.data.requestsLeft,
@@ -41,7 +53,7 @@ class LLMService {
           output: null,
           requestsLeft: null,
           limit: null,
-          error: `API Configuration Error: ${errorMessage}. Please check your API key in Settings.`
+          error: `Service temporarily unavailable. Please try again in a moment.`
         };
       }
       
@@ -49,7 +61,7 @@ class LLMService {
         output: null,
         requestsLeft: null,
         limit: null,
-        error: error.response?.data?.error || error.message || 'An error occurred.'
+        error: error.response?.data?.error || error.message || 'Connection error. Please try again.'
       };
     }
   }

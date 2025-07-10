@@ -342,11 +342,21 @@ const PromptGenerator = () => {
       setRequestsLeft(result.requestsLeft);
       setRequestLimit(result.limit);
       
+      // Debug logging for enhancement status
+      console.log('Enhancement result:', {
+        enhanced: result.enhanced,
+        inputLength: input.trim().length,
+        outputLength: result.output.length,
+        timestamp: new Date().toISOString()
+      });
+      
       // Update LLM status based on whether enhancement was used
       if (result.enhanced) {
         setLlmStatus('enhanced');
+        console.log('✨ Using AI Enhancement');
       } else {
         setLlmStatus('local');
+        console.log('🔧 Using Local Enhancement');
       }
       
       setOutput(result.output);
@@ -513,13 +523,13 @@ const PromptGenerator = () => {
             <div className="flex items-center gap-2">
               {llmStatus === 'enhanced' ? (
                 <>
-                  <Zap className="w-4 h-4 text-green-400" />
-                  <span className="text-sm text-green-400">AI Enhanced</span>
+                  <Sparkles className="w-4 h-4 text-green-400 animate-pulse" />
+                  <span className="text-sm text-green-400 font-bold">✨ AI ENHANCED</span>
                 </>
               ) : llmStatus === 'local' ? (
                 <>
-                  <Brain className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm text-blue-400">Local Enhancement</span>
+                  <Brain className="w-4 h-4 text-yellow-400" />
+                  <span className="text-sm text-yellow-400 font-semibold">🔧 Local Mode</span>
                 </>
               ) : llmStatus === 'available' ? (
                 <>
@@ -764,6 +774,28 @@ const PromptGenerator = () => {
               Enhanced Prompt
             </h3>
             <div className="bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 flex-1 flex flex-col card-container">
+              {/* Enhancement Status Banner */}
+              {output && (
+                <div className={`mb-3 p-2 rounded-lg border ${
+                  llmStatus === 'enhanced' 
+                    ? 'bg-green-900/20 border-green-600/30' 
+                    : 'bg-yellow-900/20 border-yellow-600/30'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {llmStatus === 'enhanced' ? (
+                      <>
+                        <Sparkles className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-green-300 font-semibold">✨ AI-Enhanced Prompt</span>
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="w-4 h-4 text-yellow-400" />
+                        <span className="text-sm text-yellow-300 font-semibold">🔧 Local Enhancement (AI unavailable)</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="flex-1 min-h-[400px] overflow-y-auto custom-scrollbar">
                 {output ? (
                   <div className="h-full flex flex-col">
