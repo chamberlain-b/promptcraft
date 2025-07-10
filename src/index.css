@@ -101,8 +101,8 @@
 /* Auto-expanding textarea */
 .auto-expand-textarea {
   field-sizing: content;
-  min-height: 120px;
-  max-height: 400px;
+  min-height: 180px;
+  max-height: 500px;
   transition: height 0.2s ease;
   resize: none;
 }
