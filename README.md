@@ -190,7 +190,24 @@ src/
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
+## � Privacy & Security
+
+### Data Handling
+- **Local Storage**: User preferences and history are stored locally in your browser
+- **Third-Party Processing**: Inputs are sent to AI services (OpenAI, etc.) for processing
+- **No Personal Data**: Avoid submitting sensitive or personal information
+- **Training Data**: Third-party AI providers may use inputs for model training
+
+### Best Practices
+- Review the [Privacy Policy](PRIVACY_POLICY.md) before use
+- Use responsibly and follow your organization's AI usage policies
+- Clear sensitive data from local storage regularly
+- Set up API key restrictions in your OpenAI dashboard
+
+### Disclaimer
+This tool is provided "as-is" without warranty. Users are responsible for reviewing generated content and ensuring compliance with applicable laws and policies.
+
+## �📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 

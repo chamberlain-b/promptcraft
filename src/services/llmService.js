@@ -70,27 +70,79 @@ class LLMService {
 
   detectIntent(input) {
     const intents = {
-      'writing': ['write', 'story', 'article', 'blog', 'content', 'essay', 'report'],
-      'coding': ['code', 'program', 'script', 'debug', 'algorithm', 'function', 'api'],
-      'analysis': ['analyze', 'explain', 'data', 'research', 'study', 'examine'],
-      'communication': ['email', 'message', 'letter', 'proposal', 'presentation'],
-      'planning': ['plan', 'organize', 'schedule', 'strategy', 'roadmap'],
-      'education': ['teach', 'learn', 'tutorial', 'guide', 'explain', 'how to'],
-      'creation': ['design', 'create', 'build', 'develop', 'invent'],
-      'business': ['business', 'strategy', 'marketing', 'sales', 'startup'],
-      'health': ['health', 'fitness', 'wellness', 'diet', 'exercise'],
-      'travel': ['travel', 'trip', 'vacation', 'itinerary', 'destination'],
-      'finance': ['finance', 'money', 'budget', 'investment', 'financial'],
-      'legal': ['legal', 'law', 'contract', 'agreement', 'compliance'],
-      'career': ['career', 'job', 'resume', 'interview', 'professional']
+      'writing': {
+        keywords: ['write', 'story', 'article', 'blog', 'content', 'essay', 'report', 'copy', 'script', 'narrative', 'review', 'description'],
+        weight: 1
+      },
+      'coding': {
+        keywords: ['code', 'program', 'script', 'debug', 'algorithm', 'function', 'api', 'software', 'app', 'website', 'database', 'python', 'javascript', 'react', 'html', 'css'],
+        weight: 1
+      },
+      'analysis': {
+        keywords: ['analyze', 'explain', 'data', 'research', 'study', 'examine', 'evaluate', 'assess', 'investigate', 'compare', 'statistics', 'trends'],
+        weight: 1
+      },
+      'communication': {
+        keywords: ['email', 'message', 'letter', 'proposal', 'presentation', 'pitch', 'memo', 'announcement', 'newsletter', 'response'],
+        weight: 1
+      },
+      'planning': {
+        keywords: ['plan', 'organize', 'schedule', 'strategy', 'roadmap', 'timeline', 'project', 'workflow', 'process', 'framework'],
+        weight: 1
+      },
+      'education': {
+        keywords: ['teach', 'learn', 'tutorial', 'guide', 'explain', 'how to', 'lesson', 'course', 'training', 'instruction', 'workshop'],
+        weight: 1
+      },
+      'creation': {
+        keywords: ['design', 'create', 'build', 'develop', 'invent', 'generate', 'make', 'craft', 'produce', 'construct'],
+        weight: 1
+      },
+      'business': {
+        keywords: ['business', 'strategy', 'marketing', 'sales', 'startup', 'revenue', 'profit', 'customer', 'market', 'competitor', 'growth'],
+        weight: 1
+      },
+      'health': {
+        keywords: ['health', 'fitness', 'wellness', 'diet', 'exercise', 'nutrition', 'medical', 'symptom', 'treatment', 'therapy'],
+        weight: 1
+      },
+      'travel': {
+        keywords: ['travel', 'trip', 'vacation', 'itinerary', 'destination', 'hotel', 'flight', 'tourism', 'visit', 'explore'],
+        weight: 1
+      },
+      'finance': {
+        keywords: ['finance', 'money', 'budget', 'investment', 'financial', 'savings', 'loan', 'credit', 'tax', 'income'],
+        weight: 1
+      },
+      'legal': {
+        keywords: ['legal', 'law', 'contract', 'agreement', 'compliance', 'regulation', 'policy', 'rights', 'liability'],
+        weight: 1
+      },
+      'career': {
+        keywords: ['career', 'job', 'resume', 'interview', 'professional', 'skill', 'promotion', 'networking', 'workplace'],
+        weight: 1
+      }
     };
 
-    for (const [intent, keywords] of Object.entries(intents)) {
-      if (keywords.some(keyword => input.includes(keyword))) {
-        return intent;
+    let bestMatch = 'general';
+    let highestScore = 0;
+
+    for (const [intent, data] of Object.entries(intents)) {
+      let score = 0;
+      data.keywords.forEach(keyword => {
+        if (input.includes(keyword)) {
+          // Give more weight to exact matches and longer keywords
+          score += keyword.length > 5 ? 2 : 1;
+        }
+      });
+      
+      if (score > highestScore) {
+        highestScore = score;
+        bestMatch = intent;
       }
     }
-    return 'general';
+
+    return bestMatch;
   }
 
   extractKeywords(input) {
@@ -161,59 +213,80 @@ class LLMService {
     const tone = context.tone || requirements.tone || 'professional';
     const length = context.length || requirements.length || 'medium';
     
-    // Add tone constraint
-    constraints.push(`• Tone: ${tone.charAt(0).toUpperCase() + tone.slice(1)}`);
+    // Add tone constraint with more specific descriptions
+    const toneDescriptions = {
+      'professional': 'Professional and authoritative',
+      'casual': 'Conversational and approachable',
+      'formal': 'Formal and academic',
+      'friendly': 'Warm and engaging',
+      'academic': 'Scholarly and evidence-based',
+      'technical': 'Precise and technical',
+      'creative': 'Innovative and expressive'
+    };
+    constraints.push(`• Tone: ${toneDescriptions[tone] || tone.charAt(0).toUpperCase() + tone.slice(1)}`);
     
     // Add length constraint based on length preference
     switch (length) {
       case 'short':
-        constraints.push('• Target length: 200-400 words');
+        constraints.push('• Length: Concise response (200-400 words)');
         break;
       case 'medium':
-        constraints.push('• Target length: 500-800 words');
+        constraints.push('• Length: Detailed response (500-800 words)');
         break;
       case 'long':
-        constraints.push('• Target length: 800-1200 words');
+        constraints.push('• Length: Comprehensive response (800-1200 words)');
         break;
       case 'comprehensive':
-        constraints.push('• Target length: 1200+ words');
+        constraints.push('• Length: Extensive response (1200+ words with in-depth analysis)');
         break;
       default:
         if (requirements.length) {
-          constraints.push(`• Target length: ${requirements.length.amount} ${requirements.length.unit}`);
+          constraints.push(`• Length: Approximately ${requirements.length.amount} ${requirements.length.unit}`);
         } else {
-          constraints.push('• Target length: 500-800 words');
+          constraints.push('• Length: Detailed response (500-800 words)');
         }
     }
     
+    // Intent-specific constraints with more precision
     switch (intent) {
       case 'writing':
-        constraints.push('• Include engaging introduction and conclusion');
-        constraints.push('• Use clear structure with headings');
+        constraints.push('• Structure: Compelling introduction, well-developed body, strong conclusion');
+        constraints.push('• Style: Engaging narrative flow with varied sentence structure');
+        constraints.push('• Elements: Include relevant examples, metaphors, or anecdotes');
         break;
       case 'coding':
-        constraints.push('• Include comprehensive error handling');
-        constraints.push('• Follow best practices and coding standards');
-        constraints.push('• Provide detailed comments and documentation');
-        constraints.push('• Include usage examples');
+        constraints.push('• Code Quality: Production-ready code with comprehensive error handling');
+        constraints.push('• Documentation: Detailed inline comments and usage examples');
+        constraints.push('• Best Practices: Follow language-specific conventions and security standards');
+        constraints.push('• Testing: Include test cases or validation methods where applicable');
         break;
       case 'analysis':
-        constraints.push('• Provide data-driven insights');
-        constraints.push('• Include relevant statistics and trends');
-        constraints.push('• Offer actionable recommendations');
-        constraints.push('• Consider multiple perspectives');
+        constraints.push('• Methodology: Data-driven approach with evidence-based conclusions');
+        constraints.push('• Insights: Multiple perspectives with trend analysis');
+        constraints.push('• Recommendations: Specific, actionable next steps with priority levels');
+        constraints.push('• Validation: Include relevant metrics, statistics, or case studies');
         break;
       case 'planning':
-        constraints.push('• Include specific timeframes');
-        constraints.push('• Prioritize tasks by importance');
-        constraints.push('• Consider resource constraints');
-        constraints.push('• Provide actionable next steps');
+        constraints.push('• Timeline: Specific milestones with realistic timeframes');
+        constraints.push('• Prioritization: Clear importance ranking with rationale');
+        constraints.push('• Resources: Consider budget, personnel, and tool requirements');
+        constraints.push('• Risk Management: Identify potential obstacles and mitigation strategies');
+        break;
+      case 'communication':
+        constraints.push('• Clarity: Clear, persuasive messaging tailored to audience');
+        constraints.push('• Structure: Logical flow with strong opening and compelling call-to-action');
+        constraints.push('• Personalization: Adapt language and examples to recipient context');
+        break;
+      case 'education':
+        constraints.push('• Pedagogy: Progressive learning with clear explanations');
+        constraints.push('• Examples: Concrete, relatable examples and practical exercises');
+        constraints.push('• Assessment: Include checkpoints or self-evaluation methods');
         break;
       default:
-        constraints.push('• Provide comprehensive, well-researched information');
-        constraints.push('• Use clear, professional language');
-        constraints.push('• Include relevant context and background');
-        constraints.push('• Ensure accuracy and reliability');
+        constraints.push('• Research: Comprehensive, well-sourced information');
+        constraints.push('• Clarity: Clear, logical structure with professional language');
+        constraints.push('• Actionability: Practical insights with implementation guidance');
+        constraints.push('• Accuracy: Current, reliable information with proper context');
     }
     
     return constraints;
@@ -221,20 +294,26 @@ class LLMService {
 
   generateFormat(intent, requirements) {
     if (requirements.format) {
-      return `• Use ${requirements.format} format`;
+      return `• Use ${requirements.format} format exclusively\n• Ensure proper formatting consistency throughout`;
     }
     
     switch (intent) {
       case 'writing':
-        return '• Use clear headings and subheadings\n• Include engaging introduction and conclusion\n• Use paragraphs for readability\n• Incorporate relevant examples';
+        return '• Use compelling headlines and subheadings\n• Structure with introduction, body paragraphs, and conclusion\n• Include transition sentences between sections\n• Add relevant quotes, examples, or case studies';
       case 'coding':
-        return '• Provide complete, runnable code\n• Include detailed comments\n• Add usage examples\n• Explain the logic and approach';
+        return '• Provide complete, executable code with proper indentation\n• Include detailed docstrings and inline comments\n• Add usage examples with expected outputs\n• Explain algorithm complexity and design decisions';
       case 'analysis':
-        return '• Use bullet points for key findings\n• Include numbered lists for steps\n• Provide clear section headers\n• Use tables or charts where appropriate';
+        return '• Use executive summary for key findings\n• Organize with numbered sections and bullet points\n• Include data tables, charts descriptions, or visual aids\n• Provide clear methodology and conclusion sections';
       case 'planning':
-        return '• Use checkboxes for actionable items\n• Include time estimates\n• Organize by priority levels\n• Provide clear deadlines';
+        return '• Use numbered phases with clear milestones\n• Include timeline with specific dates or durations\n• Add priority levels (High/Medium/Low) for each item\n• Provide resource allocation and responsibility assignments';
+      case 'communication':
+        return '• Start with clear subject line or purpose statement\n• Use professional salutation and closing\n• Structure with opening, body, and call-to-action\n• Include relevant context and next steps';
+      case 'education':
+        return '• Use progressive learning structure (basic → advanced)\n• Include practical exercises and examples\n• Add knowledge check questions or summaries\n• Provide additional resources and further reading';
+      case 'business':
+        return '• Include executive summary and key recommendations\n• Use business-standard formatting with clear sections\n• Add ROI analysis or cost-benefit considerations\n• Provide implementation timeline and success metrics';
       default:
-        return '• Use clear, organized structure\n• Include relevant examples\n• Provide actionable insights\n• Use appropriate formatting for readability';
+        return '• Use clear, hierarchical structure with appropriate headings\n• Include relevant examples and practical applications\n• Provide actionable takeaways and next steps\n• Format for easy scanning and implementation';
     }
   }
 
@@ -242,56 +321,67 @@ class LLMService {
     const role = this.getRole(intent, context);
     const contextInfo = this.getContextInfo(context);
     
-    let prompt = `You are an expert ${role}. ${contextInfo}
+    let prompt = `<role>
+You are an expert ${role}. ${contextInfo}
+</role>
 
-**TASK:**
+<task>
 ${userInput}
+</task>
 
-**REQUIREMENTS:**
+<requirements>
 ${constraints.join('\n')}
+</requirements>
 
-**OUTPUT FORMAT:**
+<format>
 ${format}
+</format>
 
-**ADDITIONAL GUIDELINES:**
-• Provide comprehensive, well-researched information
-• Use clear, professional language
-• Include relevant context and background information
-• Ensure accuracy and reliability of information
-• Consider the user's level of expertise
-• Provide actionable insights and next steps
-• Format the response for easy reading and implementation
+<instructions>
+Please provide a comprehensive response that:
 
-**SUCCESS CRITERIA:**
-Your response should be:
-• Comprehensive and thorough in addressing the request
-• Well-structured with clear organization
-• Actionable with specific next steps
-• Professional yet accessible in tone
-• Accurate and up-to-date with current information
-• Practical and implementable
+1. DIRECTLY ADDRESSES the user's request with specific, actionable information
+2. FOLLOWS ALL REQUIREMENTS listed above without exception
+3. USES THE SPECIFIED FORMAT consistently throughout
+4. MAINTAINS THE REQUESTED TONE and length parameters
+5. INCLUDES RELEVANT EXAMPLES, data, or case studies where appropriate
+6. PROVIDES CLEAR NEXT STEPS or implementation guidance
+7. ENSURES ACCURACY and reliability of all information provided
 
-Please provide a detailed, structured response that addresses all aspects of the request.`;
+Your response should be immediately useful and implementable by the user.
+</instructions>
+
+<output_quality_criteria>
+✓ Comprehensive coverage of the topic
+✓ Clear, logical organization and flow
+✓ Specific, actionable recommendations
+✓ Professional yet accessible language
+✓ Accurate and current information
+✓ Practical implementation guidance
+✓ Appropriate depth for the intended audience
+</output_quality_criteria>
+
+Please provide your response now:`;
 
     return prompt;
   }
 
   getRole(intent, context = {}) {
     const roles = {
-      'writing': 'content writer and storyteller',
-      'coding': 'software engineer and technical mentor',
-      'analysis': 'data analyst and research specialist',
-      'communication': 'professional communication expert',
-      'planning': 'productivity consultant and project manager',
-      'education': 'experienced educator and subject matter expert',
-      'creation': 'creative professional and design expert',
-      'business': 'business strategist and consultant',
-      'health': 'health and wellness expert',
-      'travel': 'travel planner and destination expert',
-      'finance': 'financial advisor and budgeting expert',
-      'legal': 'legal consultant and document specialist',
-      'career': 'career coach and professional development expert',
-      'general': 'expert consultant and problem solver'
+      'writing': 'content strategist and storytelling expert with 10+ years of experience in creating compelling narratives',
+      'coding': 'senior software architect and technical mentor specializing in clean code and scalable solutions',
+      'analysis': 'data scientist and strategic analyst with expertise in research methodology and insights generation',
+      'communication': 'professional communication specialist and persuasive writing expert',
+      'planning': 'project management consultant and strategic planning expert with Agile and Lean methodologies',
+      'education': 'instructional designer and subject matter expert with proven teaching methodologies',
+      'creation': 'creative director and innovation strategist with design thinking expertise',
+      'business': 'management consultant and business strategy expert with Fortune 500 experience',
+      'health': 'certified health and wellness coach with evidence-based practice approach',
+      'travel': 'professional travel consultant and destination specialist with global expertise',
+      'finance': 'certified financial planner and investment strategist with risk management expertise',
+      'legal': 'legal strategy consultant and compliance expert (note: not providing legal advice)',
+      'career': 'executive career coach and professional development strategist',
+      'general': 'multidisciplinary expert consultant with cross-industry problem-solving experience'
     };
     
     return roles[intent] || roles.general;
@@ -299,17 +389,27 @@ Please provide a detailed, structured response that addresses all aspects of the
 
   getContextInfo(context) {
     if (!context || Object.keys(context).length === 0) {
-      return 'You are providing comprehensive, well-researched solutions to the user\'s request.';
+      return 'Your expertise spans multiple domains and you provide solutions tailored to the user\'s specific needs.';
     }
     
-    let contextInfo = 'You are providing comprehensive, well-researched solutions with the following context: ';
+    let contextInfo = 'Your expertise is enhanced by the following context parameters: ';
     const contextParts = [];
     
-    if (context.audience) contextParts.push(`target audience: ${context.audience}`);
-    if (context.language) contextParts.push(`programming language: ${context.language}`);
-    if (context.topic) contextParts.push(`topic focus: ${context.topic}`);
-    if (context.tone) contextParts.push(`tone: ${context.tone}`);
-    if (context.length) contextParts.push(`length: ${context.length}`);
+    if (context.audience) {
+      contextParts.push(`target audience: ${context.audience} (adjust complexity and terminology accordingly)`);
+    }
+    if (context.language) {
+      contextParts.push(`technical focus: ${context.language} (provide language-specific best practices)`);
+    }
+    if (context.topic) {
+      contextParts.push(`domain expertise: ${context.topic} (leverage specialized knowledge)`);
+    }
+    if (context.tone) {
+      contextParts.push(`communication style: ${context.tone} (maintain consistency throughout)`);
+    }
+    if (context.length) {
+      contextParts.push(`depth requirement: ${context.length} (balance comprehensiveness with clarity)`);
+    }
     
     return contextInfo + contextParts.join(', ') + '.';
   }

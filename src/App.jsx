@@ -442,28 +442,28 @@ const PromptGenerator = () => {
       icon: <PenTool className="w-5 h-5" />
     },
     {
-      title: "Code Generation",
-      input: "create a Python function to sort a list",
+      title: "App Development",
+      input: "build a task management app",
       output: "You are a senior software engineer and technical mentor with extensive experience in Python development. Create a comprehensive Python function to sort a list that demonstrates best practices and includes multiple sorting options. The function should handle different data types, include comprehensive error handling, provide detailed comments explaining the logic, and include usage examples with different scenarios. Consider edge cases like empty lists, mixed data types, and performance optimization. Provide both the function implementation and clear documentation on how to use it effectively.",
       icon: <Code className="w-5 h-5" />
     },
     {
-      title: "Data Analysis",
-      input: "analyze sales data trends",
+      title: "AI Integration",
+      input: "integrate AI chatbot into website",
       output: "You are a data analyst and research specialist with expertise in sales analytics and business intelligence. Conduct a comprehensive analysis of sales data trends that provides actionable insights for business decision-making. Your analysis should include trend identification, seasonal patterns, performance metrics, comparative analysis, and predictive insights. Use clear visualizations where appropriate, provide statistical context, identify key drivers of sales performance, and offer specific recommendations for improvement. Structure your response with clear sections for findings, insights, and actionable next steps.",
-      icon: <MessageSquare className="w-5 h-5" />
+      icon: <Brain className="w-5 h-5" />
     },
     {
-      title: "Meal Planning",
-      input: "plan a week of healthy meals",
+      title: "Business Strategy",
+      input: "create a business plan for a startup",
       output: "You are a nutritionist and meal planning expert with knowledge of dietary science and culinary arts. Create a comprehensive weekly meal plan that prioritizes nutrition, variety, and practicality. The plan should include balanced macronutrients, diverse food groups, seasonal ingredients, and accommodate common dietary preferences. Provide detailed recipes with nutritional information, shopping lists organized by category, preparation time estimates, and storage recommendations. Consider budget constraints, cooking skill levels, and time availability. Include options for meal prep and leftovers to maximize efficiency.",
-      icon: <ChefHat className="w-5 h-5" />
+      icon: <Calendar className="w-5 h-5" />
     },
     {
-      title: "Project Planning",
-      input: "organize a marketing campaign",
+      title: "Content Marketing",
+      input: "develop a content marketing strategy",
       output: "You are a productivity consultant and project manager with expertise in marketing strategy and campaign execution. Develop a comprehensive marketing campaign plan that includes clear objectives, target audience analysis, channel strategy, timeline, budget allocation, and success metrics. The plan should be actionable with specific tasks, deadlines, and responsibilities. Include risk assessment, contingency plans, and performance tracking methods. Provide templates for key deliverables, communication protocols, and evaluation criteria. Structure the response with clear phases, milestones, and measurable outcomes.",
-      icon: <Calendar className="w-5 h-5" />
+      icon: <MessageSquare className="w-5 h-5" />
     },
     {
       title: "Creative Writing",
@@ -532,43 +532,49 @@ const PromptGenerator = () => {
         </div>
 
         {/* Main Content */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-12">
+        <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-7xl mx-auto">
           {/* Input */}
-          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-8 border border-gray-700/50">
+          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-6 border border-gray-700/50 flex flex-col h-[600px]">
             <h3 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-teal-400" />
               Your Idea
             </h3>
             
-            {/* Prompt Output Style Controls - Single Row, No Icons */}
-            <div className="mb-3 bg-gray-800/30 rounded-2xl p-3 border border-gray-600/30">
-              <div className="flex flex-nowrap items-center gap-x-4">
+            {/* Prompt Output Style Controls - Mobile Responsive */}
+            <div className="mb-4 bg-gray-800/30 rounded-2xl p-3 border border-gray-600/30">
+              <div className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-center gap-2 sm:gap-x-4">
                 <span className="text-base font-bold text-gray-300 whitespace-nowrap">Output Style:</span>
-                <span className="text-sm font-medium text-gray-200 whitespace-nowrap">Tone</span>
-                <select
-                  value={currentTone}
-                  onChange={(e) => setCurrentTone(e.target.value)}
-                  className="ml-1 px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-transparent transition-all"
-                >
-                  <option value="professional">Professional</option>
-                  <option value="casual">Casual</option>
-                  <option value="formal">Formal</option>
-                  <option value="friendly">Friendly</option>
-                  <option value="academic">Academic</option>
-                  <option value="technical">Technical</option>
-                  <option value="creative">Creative</option>
-                </select>
-                <span className="text-sm font-medium text-gray-200 whitespace-nowrap">Length</span>
-                <select
-                  value={currentLength}
-                  onChange={(e) => setCurrentLength(e.target.value)}
-                  className="ml-1 px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-transparent transition-all"
-                >
-                  <option value="short">Short</option>
-                  <option value="medium">Medium</option>
-                  <option value="long">Long</option>
-                  <option value="comprehensive">Comprehensive</option>
-                </select>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-x-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-200 whitespace-nowrap">Tone</span>
+                    <select
+                      value={currentTone}
+                      onChange={(e) => setCurrentTone(e.target.value)}
+                      className="flex-1 sm:flex-initial px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-transparent transition-all min-w-0"
+                    >
+                      <option value="professional">Professional</option>
+                      <option value="casual">Casual</option>
+                      <option value="formal">Formal</option>
+                      <option value="friendly">Friendly</option>
+                      <option value="academic">Academic</option>
+                      <option value="technical">Technical</option>
+                      <option value="creative">Creative</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-200 whitespace-nowrap">Length</span>
+                    <select
+                      value={currentLength}
+                      onChange={(e) => setCurrentLength(e.target.value)}
+                      className="flex-1 sm:flex-initial px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-transparent transition-all min-w-0"
+                    >
+                      <option value="short">Short</option>
+                      <option value="medium">Medium</option>
+                      <option value="long">Long</option>
+                      <option value="comprehensive">Comprehensive</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -668,12 +674,12 @@ const PromptGenerator = () => {
               </div>
             )}
             
-            <div className="relative">
+            <div className="relative flex-1">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Type your basic idea here... (e.g., 'write a story about space travel', 'analyze sales data', 'create a meal plan')"
-                className="w-full h-60 bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/70 focus:border-teal-400 caret-teal-400 transition-all"
+                className="w-full h-full min-h-[240px] bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/70 focus:border-teal-400 caret-teal-400 transition-all break-words whitespace-pre-wrap overflow-wrap-anywhere overflow-y-auto custom-scrollbar"
               />
             </div>
 
@@ -704,7 +710,7 @@ const PromptGenerator = () => {
               </div>
             )}
 
-            <div className="flex gap-3 mt-4">
+            <div className="flex flex-col sm:flex-row gap-3 mt-4">
               <button
                 onClick={generatePrompt}
                 disabled={!input.trim() || isGenerating || requestsLeft === 0}
@@ -738,24 +744,30 @@ const PromptGenerator = () => {
           </div>
 
           {/* Output */}
-          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-8 border border-gray-700/50">
+          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-6 border border-gray-700/50 flex flex-col h-[600px]">
             <h3 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
               <Wand2 className="w-5 h-5 text-purple-400" />
               Enhanced Prompt
             </h3>
-            <div className="bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 h-60 overflow-y-auto">
-              {output ? (
-                <div>
-                  <p className="text-gray-200 leading-relaxed whitespace-pre-wrap">{output}</p>
-                  <div className="mt-3 p-2 bg-blue-900/20 border border-blue-600/30 rounded-lg">
-                    <p className="text-xs text-blue-300">
-                      💡 This is an enhanced prompt ready to use with ChatGPT, Claude, or other AI systems. Copy and paste it directly!
-                    </p>
+            <div className="bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 flex-1 flex flex-col">
+              <div className="flex-1 min-h-[240px] overflow-y-auto custom-scrollbar">
+                {output ? (
+                  <div className="h-full flex flex-col">
+                    <div className="flex-1">
+                      <p className="text-gray-200 leading-relaxed whitespace-pre-wrap break-words overflow-wrap-anywhere">{output}</p>
+                      <div className="mt-3 p-2 bg-blue-900/20 border border-blue-600/30 rounded-lg">
+                        <p className="text-xs text-blue-300 break-words">
+                          💡 This is an enhanced prompt ready to use with ChatGPT, Claude, or other AI systems. Copy and paste it directly!
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <p className="text-gray-500 italic">Your enhanced prompt will appear here...</p>
-              )}
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-gray-500 italic">Your enhanced prompt will appear here...</p>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex gap-3 mt-4">
               <button
@@ -773,12 +785,12 @@ const PromptGenerator = () => {
         {/* Examples Section */}
         <div className="bg-gray-900/60 backdrop-blur-md rounded-3xl p-8 border border-gray-700/30">
           <h3 className="text-2xl font-bold text-gray-100 mb-6 text-center">Try These Examples</h3>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {examples.map((example, index) => (
               <div
                 key={index}
                 onClick={() => useExample(example)}
-                className="bg-gray-800/60 hover:bg-gray-700/60 rounded-2xl p-6 cursor-pointer transition-all border border-gray-600/30 hover:border-teal-400/50 group"
+                className="bg-gray-800/60 hover:bg-gray-700/60 rounded-2xl p-6 cursor-pointer transition-all border border-gray-600/30 hover:border-teal-400/50 group min-h-[400px] flex flex-col"
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-gradient-to-r from-teal-500/30 to-purple-500/30 rounded-lg group-hover:from-teal-500/50 group-hover:to-purple-500/50 transition-all text-teal-300">
@@ -786,14 +798,16 @@ const PromptGenerator = () => {
                   </div>
                   <h4 className="text-lg font-semibold text-gray-100">{example.title}</h4>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-4 flex-1 flex flex-col">
                   <div>
-                    <p className="text-sm text-gray-400 mb-1">Input:</p>
-                    <p className="text-gray-200 text-sm bg-gray-700/40 rounded-lg p-2">{example.input}</p>
+                    <p className="text-sm text-gray-400 mb-2">Input:</p>
+                    <p className="text-gray-200 text-sm bg-gray-700/40 rounded-lg p-3">{example.input}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">Enhanced:</p>
-                    <p className="text-gray-200 text-sm bg-gray-700/40 rounded-lg p-2 line-clamp-3">{example.output}</p>
+                  <div className="flex-1 flex flex-col">
+                    <p className="text-sm text-gray-400 mb-2">Enhanced:</p>
+                    <div className="bg-gray-700/40 rounded-lg p-3 flex-1 overflow-y-auto max-h-[250px]">
+                      <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap break-words">{example.output}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -808,6 +822,59 @@ const PromptGenerator = () => {
           </p>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="mt-16 pt-8 border-t border-gray-700/30">
+        <div className="max-w-4xl mx-auto text-center space-y-4">
+          {/* Privacy and Usage Disclaimer */}
+          <div className="bg-amber-900/20 border border-amber-600/30 rounded-2xl p-4 mb-6">
+            <h4 className="text-amber-400 font-semibold mb-2 flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                <path d="M12 9v4"/>
+                <path d="M12 17h.01"/>
+              </svg>
+              Important Notice
+            </h4>
+            <p className="text-amber-200 text-sm leading-relaxed">
+              By using this service, you acknowledge that your inputs may be processed by third-party AI services and could potentially be used for training purposes. 
+              Please avoid submitting sensitive, confidential, or personal information. Use this tool responsibly and in accordance with your organization's data policies.
+            </p>
+          </div>
+
+          {/* Links and Info */}
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-sm text-gray-400">
+            <span>© 2025 Prompt Craft</span>
+            <span className="hidden sm:inline">•</span>
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="hover:text-gray-300 transition-colors underline"
+            >
+              Privacy Settings
+            </button>
+            <span className="hidden sm:inline">•</span>
+            <a 
+              href="https://github.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-gray-300 transition-colors underline"
+            >
+              Open Source
+            </a>
+          </div>
+
+          {/* Additional Legal Info */}
+          <div className="text-xs text-gray-500 leading-relaxed max-w-2xl mx-auto">
+            <p className="mb-2">
+              This tool is provided "as is" without warranty of any kind. Results may vary and should be reviewed before use. 
+              No liability is assumed for the use of generated content.
+            </p>
+            <p>
+              For educational and personal use. Please respect intellectual property rights and follow applicable laws and regulations.
+            </p>
+          </div>
+        </div>
+      </footer>
 
       {/* Settings Modal */}
       <Settings isOpen={showSettings} onClose={() => {
