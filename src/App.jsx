@@ -68,7 +68,7 @@ const PromptGenerator = () => {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      const newHeight = Math.min(Math.max(textarea.scrollHeight, 180), 500);
+      const newHeight = Math.min(Math.max(textarea.scrollHeight, 220), 600);
       textarea.style.height = newHeight + 'px';
     }
   };
@@ -546,7 +546,7 @@ const PromptGenerator = () => {
         {/* Main Content */}
         <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-7xl mx-auto overflow-hidden">
           {/* Input */}
-          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-6 border border-gray-700/50 flex flex-col min-h-[700px] card-container">
+          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-8 border border-gray-700/50 flex flex-col min-h-[800px] card-container">
             <h3 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-teal-400" />
               Your Idea
@@ -692,8 +692,8 @@ const PromptGenerator = () => {
                 value={input}
                 onChange={handleInputChange}
                 placeholder="Type your basic idea here... (e.g., 'write a story about space travel', 'analyze sales data', 'create a meal plan')"
-                className="w-full auto-expand-textarea bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/70 focus:border-teal-400 caret-teal-400 transition-all textarea-container custom-scrollbar"
-                style={{ minHeight: '180px', maxHeight: '500px' }}
+                className="w-full auto-expand-textarea bg-gray-800/50 border border-gray-600/50 rounded-2xl p-6 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/70 focus:border-teal-400 caret-teal-400 transition-all textarea-container custom-scrollbar"
+                style={{ minHeight: '220px', maxHeight: '600px' }}
               />
             </div>
 
@@ -758,13 +758,13 @@ const PromptGenerator = () => {
           </div>
 
           {/* Output */}
-          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-6 border border-gray-700/50 flex flex-col min-h-[700px] card-container">
+          <div className="bg-gray-900/80 backdrop-blur-md rounded-3xl p-8 border border-gray-700/50 flex flex-col min-h-[800px] card-container">
             <h3 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
               <Wand2 className="w-5 h-5 text-purple-400" />
               Enhanced Prompt
             </h3>
             <div className="bg-gray-800/50 border border-gray-600/50 rounded-2xl p-4 flex-1 flex flex-col card-container">
-              <div className="flex-1 min-h-[300px] overflow-y-auto custom-scrollbar">
+              <div className="flex-1 min-h-[400px] overflow-y-auto custom-scrollbar">
                 {output ? (
                   <div className="h-full flex flex-col">
                     <div className="flex-1">
@@ -804,7 +804,7 @@ const PromptGenerator = () => {
               <div
                 key={index}
                 onClick={() => useExample(example)}
-                className="bg-gray-800/60 hover:bg-gray-700/60 rounded-2xl p-6 cursor-pointer transition-all border border-gray-600/30 hover:border-teal-400/50 group min-h-[400px] flex flex-col"
+                className="bg-gray-800/60 hover:bg-gray-700/60 rounded-2xl p-6 cursor-pointer transition-all border border-gray-600/30 hover:border-teal-400/50 group min-h-[500px] flex flex-col"
               >
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-gradient-to-r from-teal-500/30 to-purple-500/30 rounded-lg group-hover:from-teal-500/50 group-hover:to-purple-500/50 transition-all text-teal-300">
