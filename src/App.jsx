@@ -339,6 +339,15 @@ const PromptGenerator = () => {
       }
       // Generate enhanced prompt via backend
       const result = await llmService.generateEnhancedPrompt(input.trim(), context);
+      
+      if (result.error) {
+        setOutput(`⚠️ ${result.error}`);
+        setLlmStatus('error');
+        setRequestsLeft(result.requestsLeft || 0);
+        setRequestLimit(result.limit || REQUEST_LIMIT);
+        return;
+      }
+      
       setRequestsLeft(result.requestsLeft);
       setRequestLimit(result.limit);
       
@@ -350,13 +359,13 @@ const PromptGenerator = () => {
         timestamp: new Date().toISOString()
       });
       
-      // Update LLM status based on whether enhancement was used
+      // Update LLM status - should always be enhanced now
       if (result.enhanced) {
         setLlmStatus('enhanced');
         console.log('✨ Using AI Enhancement');
       } else {
-        setLlmStatus('local');
-        console.log('🔧 Using Local Enhancement');
+        setLlmStatus('error');
+        console.log('⚠️ AI Enhancement Failed');
       }
       
       setOutput(result.output);
@@ -373,7 +382,9 @@ const PromptGenerator = () => {
       };
       setHistory(prev => [historyItem, ...prev.slice(0, 9)]); // Keep last 10 items
     } catch (error) {
-      setOutput('Error generating prompt. Please try again.');
+      console.error('Generation error:', error);
+      setOutput('⚠️ AI enhancement service is temporarily unavailable. Please try again in a few moments.');
+      setLlmStatus('error');
     } finally {
       setIsGenerating(false);
     }
@@ -526,15 +537,10 @@ const PromptGenerator = () => {
                   <Sparkles className="w-4 h-4 text-green-400 animate-pulse" />
                   <span className="text-sm text-green-400 font-bold">✨ AI ENHANCED</span>
                 </>
-              ) : llmStatus === 'local' ? (
+              ) : llmStatus === 'error' ? (
                 <>
-                  <Brain className="w-4 h-4 text-yellow-400" />
-                  <span className="text-sm text-yellow-400 font-semibold">🔧 Local Mode</span>
-                </>
-              ) : llmStatus === 'available' ? (
-                <>
-                  <Zap className="w-4 h-4 text-green-400" />
-                  <span className="text-sm text-green-400">AI Ready</span>
+                  <Brain className="w-4 h-4 text-red-400" />
+                  <span className="text-sm text-red-400 font-semibold">⚠️ Service Unavailable</span>
                 </>
               ) : (
                 <>
@@ -779,7 +785,7 @@ const PromptGenerator = () => {
                 <div className={`mb-3 p-2 rounded-lg border ${
                   llmStatus === 'enhanced' 
                     ? 'bg-green-900/20 border-green-600/30' 
-                    : 'bg-yellow-900/20 border-yellow-600/30'
+                    : 'bg-red-900/20 border-red-600/30'
                 }`}>
                   <div className="flex items-center gap-2">
                     {llmStatus === 'enhanced' ? (
@@ -789,8 +795,8 @@ const PromptGenerator = () => {
                       </>
                     ) : (
                       <>
-                        <Brain className="w-4 h-4 text-yellow-400" />
-                        <span className="text-sm text-yellow-300 font-semibold">🔧 Local Enhancement (AI unavailable)</span>
+                        <Brain className="w-4 h-4 text-red-400" />
+                        <span className="text-sm text-red-300 font-semibold">⚠️ Service Issue</span>
                       </>
                     )}
                   </div>

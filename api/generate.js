@@ -300,118 +300,33 @@ Original request: "${prompt}"`;
           type: openaiError.type,
           response: openaiError.response?.data
         });
-        console.log('Falling back to local enhancement');
-        // Fall back to local enhancement if OpenAI fails
-        useOpenAI = false;
-        result = generateLocalEnhancement(prompt, context);
+        
+        // Instead of falling back to local, return an error
+        throw new Error(`AI enhancement service error: ${openaiError.message}`);
       }
     } else {
-      // No API key available, use local enhancement
-      console.log('No API key available, using local enhancement');
-      result = generateLocalEnhancement(prompt, context);
+      // No API key available, return error instead of local fallback
+      throw new Error('AI enhancement service is not available');
     }
     
-    console.log('Final enhancement method used:', useOpenAI ? 'OpenAI' : 'Local');
+    console.log('Final enhancement method used: OpenAI AI');
     
     usage[usageKey]++;
     res.json({
       result: result,
       requestsLeft: REQUEST_LIMIT - usage[usageKey],
       limit: REQUEST_LIMIT,
-      enhanced: useOpenAI
+      enhanced: true // Always true since we only use AI now
     });
   } catch (err) {
     console.error('Error in /api/generate:', err.stack || err);
     
-    // Final fallback to local enhancement
-    try {
-      const { prompt, context } = req.body;
-      const result = generateLocalEnhancement(prompt, context || {});
-      usage[usageKey]++;
-      res.json({
-        result: result,
-        requestsLeft: REQUEST_LIMIT - usage[usageKey],
-        limit: REQUEST_LIMIT,
-        enhanced: false
-      });
-    } catch (fallbackErr) {
-      console.error('Fallback also failed:', fallbackErr);
-      res.status(500).json({ error: 'Service temporarily unavailable. Please try again later.' });
-    }
+    // Return error instead of local fallback
+    res.status(503).json({ 
+      error: 'AI enhancement service is temporarily unavailable. Please try again in a few moments.',
+      requestsLeft: usage[usageKey] ? REQUEST_LIMIT - usage[usageKey] : REQUEST_LIMIT,
+      limit: REQUEST_LIMIT,
+      enhanced: false
+    });
   }
-}
-
-// Local enhancement function as fallback
-function generateLocalEnhancement(userInput, context = {}) {
-  const lowerInput = userInput.toLowerCase();
-  const { tone = 'professional', length = 'medium' } = context;
-  
-  // Detect intent and domain
-  let domain = 'general';
-  let role = 'expert assistant';
-  
-  if (lowerInput.includes('write') || lowerInput.includes('blog') || lowerInput.includes('article')) {
-    domain = 'writing';
-    role = 'professional content writer and editor';
-  } else if (lowerInput.includes('code') || lowerInput.includes('program') || lowerInput.includes('develop')) {
-    domain = 'coding';
-    role = 'senior software engineer and technical mentor';
-  } else if (lowerInput.includes('analyze') || lowerInput.includes('data') || lowerInput.includes('research')) {
-    domain = 'analysis';
-    role = 'data analyst and research specialist';
-  } else if (lowerInput.includes('design') || lowerInput.includes('ui') || lowerInput.includes('ux')) {
-    domain = 'design';
-    role = 'professional designer and user experience expert';
-  } else if (lowerInput.includes('business') || lowerInput.includes('strategy') || lowerInput.includes('marketing')) {
-    domain = 'business';
-    role = 'business strategist and marketing expert';
-  } else if (lowerInput.includes('teach') || lowerInput.includes('explain') || lowerInput.includes('learn')) {
-    domain = 'education';
-    role = 'educational specialist and expert instructor';
-  }
-
-  // Generate structured prompt
-  const enhancedPrompt = `**ROLE & EXPERTISE:**
-You are a ${role} with extensive experience in ${domain}. You have deep knowledge of best practices, current trends, and proven methodologies in your field.
-
-**TASK OVERVIEW:**
-${userInput.charAt(0).toUpperCase() + userInput.slice(1).replace(/\.$/, '')} with ${tone} tone and ${length} detail level.
-
-**KEY REQUIREMENTS:**
-• Follow ${tone} communication style throughout
-• Provide ${length === 'short' ? 'concise and focused' : length === 'medium' ? 'balanced and comprehensive' : length === 'long' ? 'detailed and thorough' : 'exhaustive and comprehensive'} coverage
-• Include relevant examples and practical applications
-• Ensure accuracy and up-to-date information
-• Structure content for easy understanding
-
-**OUTPUT STRUCTURE:**
-• Clear introduction and overview
-• Main content organized in logical sections
-• Supporting details and examples
-• Practical recommendations or next steps
-• Summary or conclusion
-
-**SPECIFIC GUIDELINES:**
-• Use ${tone === 'formal' ? 'formal language and academic tone' : tone === 'casual' ? 'conversational and approachable language' : tone === 'technical' ? 'precise technical terminology' : tone === 'friendly' ? 'warm and engaging language' : tone === 'academic' ? 'scholarly and research-based approach' : tone === 'creative' ? 'imaginative and innovative language' : 'clear, professional communication'}
-• Include specific examples where relevant
-• Provide actionable insights and recommendations
-• Consider different perspectives and approaches
-• Maintain focus on the core objective
-
-**FORMATTING REQUIREMENTS:**
-• Use clear headings and subheadings
-• Include bullet points for key information
-• Provide numbered lists for steps or processes
-• Use bold text for important concepts
-• Structure content in logical sections
-
-**SUCCESS CRITERIA:**
-Your response should be:
-• Well-organized and easy to follow
-• Comprehensive yet focused on key points
-• Practically applicable and actionable
-• Appropriate for the intended ${tone} tone
-• Delivered at the requested ${length} detail level`;
-
-  return enhancedPrompt;
 }
