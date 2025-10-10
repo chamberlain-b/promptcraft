@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Settings as SettingsIcon, User, Save, Download, Upload, Trash2 } from 'lucide-react';
 import contextService from '../services/contextService';
 
@@ -12,14 +12,47 @@ const Settings = ({ isOpen, onClose }) => {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const dialogRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen) {
-      // Load current settings
-      const savedPreferences = contextService.getUserPreferences();
-      setPreferences(prev => ({ ...prev, ...savedPreferences }));
+    if (!isOpen) return undefined;
+
+    const savedPreferences = contextService.getUserPreferences();
+    setPreferences((prev) => ({ ...prev, ...savedPreferences }));
+
+    const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const dialogNode = dialogRef.current;
+    const focusable = dialogNode ? Array.from(dialogNode.querySelectorAll(focusableSelector)) : [];
+    if (focusable.length > 0) {
+      focusable[0].focus();
     }
-  }, [isOpen]);
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key === 'Tab' && focusable.length > 0) {
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   const handleSaveSettings = async () => {
     setIsSaving(true);
@@ -74,20 +107,37 @@ const Settings = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-gray-900/90 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl">
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        ref={dialogRef}
+        className="bg-gray-900/90 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-heading"
+        aria-describedby="settings-description"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-100">
-            <SettingsIcon className="w-6 h-6 text-teal-400" />
+          <h2 id="settings-heading" className="text-2xl font-bold flex items-center gap-2 text-gray-100">
+            <SettingsIcon className="w-6 h-6 text-teal-400" aria-hidden="true" />
             Settings
           </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-200 text-2xl font-bold px-2"
+            aria-label="Close settings"
           >
             ✕
           </button>
         </div>
+
+        <p id="settings-description" className="sr-only">
+          Update personalization options, manage data, and configure how Prompt Craft behaves.
+        </p>
 
         {message && (
           <div className={`p-3 rounded mb-4 text-sm font-medium ${

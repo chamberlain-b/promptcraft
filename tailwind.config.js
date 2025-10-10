@@ -6,6 +6,24 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        background: 'var(--color-background)',
+        surface: 'var(--color-surface)',
+        'surface-strong': 'var(--color-surface-strong)',
+        panel: 'var(--color-panel)',
+        'panel-strong': 'var(--color-panel-strong)'
+      },
+      borderColor: {
+        soft: 'var(--border-soft)',
+        strong: 'var(--border-strong)'
+      },
+      borderRadius: {
+        card: 'var(--radius-card)',
+        panel: 'var(--radius-panel)'
+      },
+      minHeight: {
+        card: 'var(--card-min-height)'
+      },
       animation: {
         'gradient-x': 'gradient-x 15s ease infinite',
         'gradient-y': 'gradient-y 15s ease infinite',
@@ -53,8 +71,9 @@ module.exports = {
       },
       backdropBlur: {
         xs: '2px',
+        card: 'var(--blur-surface)'
       }
     },
   },
   plugins: [],
-} 
+}

@@ -1,19 +1,10 @@
 import { OpenAI } from 'openai';
+import { checkRateLimit, incrementUsage, getUsageStats } from './rateLimit.js';
 
 // Initialize OpenAI only if API key is available
 let openai = null;
 if (process.env.OPENAI_API_KEY) {
   openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
-
-// In-memory usage tracking (Note: this will reset on each function invocation)
-// For production, you'd want to use a database or Redis
-const usage = {};
-const REQUEST_LIMIT = 30;
-
-function getMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${now.getMonth() + 1}`;
 }
 
 // Enhanced prompt generation system prompt
@@ -168,16 +159,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
-  const monthKey = getMonthKey();
-  const usageKey = `${ip}-${monthKey}`;
+  // Check rate limit
+  const rateLimitStatus = checkRateLimit(req);
 
-  if (!usage[usageKey]) usage[usageKey] = 0;
-  if (usage[usageKey] >= REQUEST_LIMIT) {
+  if (rateLimitStatus.isLimited) {
     return res.status(429).json({
-      error: 'Monthly free request limit reached.',
+      error: 'Monthly free request limit reached. Limit resets at the beginning of next month.',
       requestsLeft: 0,
-      limit: REQUEST_LIMIT
+      limit: rateLimitStatus.limit,
+      resetAt: rateLimitStatus.resetAt
     });
   }
 
@@ -185,7 +175,6 @@ export default async function handler(req, res) {
     const { prompt, context } = req.body;
     console.log('User input received:', prompt);
     console.log('Environment API Key:', process.env.OPENAI_API_KEY ? 'Yes' : 'No');
-    console.log('IP:', ip, 'MonthKey:', monthKey, 'UsageKey:', usageKey, 'Current usage:', usage[usageKey]);
     
     if (!prompt) {
       throw new Error('No prompt provided in request body.');
@@ -308,24 +297,30 @@ Original request: "${prompt}"`;
       // No API key available, return error instead of local fallback
       throw new Error('AI enhancement service is not available');
     }
-    
+
     console.log('Final enhancement method used: OpenAI AI');
-    
-    usage[usageKey]++;
+
+    // Increment usage counter
+    incrementUsage(req);
+    const stats = getUsageStats(req);
+
     res.json({
       result: result,
-      requestsLeft: REQUEST_LIMIT - usage[usageKey],
-      limit: REQUEST_LIMIT,
+      requestsLeft: stats.remaining,
+      limit: stats.limit,
       enhanced: true // Always true since we only use AI now
     });
   } catch (err) {
     console.error('Error in /api/generate:', err.stack || err);
-    
+
+    // Get current usage stats for error response
+    const stats = getUsageStats(req);
+
     // Return error instead of local fallback
-    res.status(503).json({ 
+    res.status(503).json({
       error: 'AI enhancement service is temporarily unavailable. Please try again in a few moments.',
-      requestsLeft: usage[usageKey] ? REQUEST_LIMIT - usage[usageKey] : REQUEST_LIMIT,
-      limit: REQUEST_LIMIT,
+      requestsLeft: stats.remaining,
+      limit: stats.limit,
       enhanced: false
     });
   }

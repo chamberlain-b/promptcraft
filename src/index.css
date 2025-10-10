@@ -2,6 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --color-background: #0f172a;
+    --color-surface: rgba(17, 24, 39, 0.8);
+    --color-surface-strong: rgba(15, 23, 42, 0.9);
+    --color-panel: rgba(31, 41, 55, 0.5);
+    --color-panel-strong: rgba(55, 65, 81, 0.6);
+    --border-soft: rgba(55, 65, 81, 0.5);
+    --border-strong: rgba(75, 85, 99, 0.6);
+    --blur-surface: 18px;
+    --radius-card: 1.5rem;
+    --radius-panel: 1rem;
+    --card-min-height: 50rem;
+  }
+
+  body {
+    background-color: var(--color-background);
+  }
+}
+
+@layer components {
+  .surface-card {
+    background-color: var(--color-surface);
+    backdrop-filter: blur(var(--blur-surface));
+    border-radius: var(--radius-card);
+    border: 1px solid var(--border-soft);
+  }
+
+  .surface-panel {
+    background-color: var(--color-panel);
+    border-radius: var(--radius-panel);
+    border: 1px solid var(--border-strong);
+  }
+
+  .surface-panel--strong {
+    background-color: var(--color-surface-strong);
+    border-radius: var(--radius-panel);
+    border: 1px solid var(--border-strong);
+  }
+
+  .chip-soft {
+    background-color: rgba(45, 55, 72, 0.35);
+    border-radius: 9999px;
+    padding: 0.25rem 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
