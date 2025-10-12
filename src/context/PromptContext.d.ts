@@ -70,6 +70,8 @@ export interface PromptActions {
   setIsListening: (value: boolean) => void;
   setHistory: (items: HistoryItem[]) => void;
   checkLlmStatus: () => void;
+  duplicatePrompt: (item: HistoryItem) => void;
+  importHistory: (items: HistoryItem[], strategy?: 'replace' | 'merge') => void;
 }
 
 export interface PromptContextValue {

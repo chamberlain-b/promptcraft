@@ -1,17 +1,70 @@
-import { type FC } from 'react';
+import { type FC, useState } from 'react';
 import Header from './Header';
 import InputPanel from './InputPanel';
 import OutputPanel from './OutputPanel';
 import ExamplesSection from './ExamplesSection';
 import RequestLimitBanner from './RequestLimitBanner';
 import Settings from './Settings';
+import ToastContainer from './ToastContainer';
+import KeyboardShortcutsDialog from './KeyboardShortcutsDialog';
 import { usePrompt } from '../context/PromptContext';
+import { useToast } from '../hooks/useToast';
+import useKeyboardShortcuts, { type KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 
 const AppLayout: FC = () => {
   const {
     state: { requestLimit, requestsLeft, llmStatus, showSettings },
-    actions: { setShowSettings, checkLlmStatus }
+    actions: { setShowSettings, checkLlmStatus, generatePrompt, clearAll, copyToClipboard }
   } = usePrompt();
+
+  const { toasts, removeToast, success, error } = useToast();
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Define keyboard shortcuts
+  const shortcuts: KeyboardShortcut[] = [
+    {
+      key: 'Enter',
+      meta: true,
+      description: 'Generate prompt',
+      action: () => {
+        generatePrompt();
+        success('Generating prompt...');
+      },
+    },
+    {
+      key: 'k',
+      meta: true,
+      description: 'Clear all',
+      action: () => {
+        clearAll();
+        success('Cleared all fields');
+      },
+    },
+    {
+      key: 'c',
+      meta: true,
+      shift: true,
+      description: 'Copy output',
+      action: () => {
+        copyToClipboard();
+      },
+    },
+    {
+      key: '?',
+      description: 'Show keyboard shortcuts',
+      action: () => setShowShortcuts(true),
+    },
+    {
+      key: 'Escape',
+      description: 'Close dialogs',
+      action: () => {
+        setShowShortcuts(false);
+        setShowSettings(false);
+      },
+    },
+  ];
+
+  useKeyboardShortcuts(shortcuts);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white">
@@ -27,6 +80,13 @@ const AppLayout: FC = () => {
           <p className="text-gray-400">
             Boost your AI interactions with better prompts ✨ Perfect for ChatGPT, Claude, and more!
           </p>
+          <button
+            type="button"
+            onClick={() => setShowShortcuts(true)}
+            className="mt-4 text-sm text-gray-500 hover:text-gray-400 transition-colors"
+          >
+            Press <kbd className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs font-mono">?</kbd> for keyboard shortcuts
+          </button>
         </div>
       </div>
       <footer className="mt-16 pt-8 border-t border-gray-700/30">
@@ -87,6 +147,7 @@ const AppLayout: FC = () => {
           </div>
         </div>
       </footer>
+      
       <Settings
         isOpen={showSettings}
         onClose={() => {
@@ -94,6 +155,14 @@ const AppLayout: FC = () => {
           checkLlmStatus();
         }}
       />
+      
+      <KeyboardShortcutsDialog
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+        shortcuts={shortcuts}
+      />
+      
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 };

@@ -1,18 +1,46 @@
-import axios from 'axios';
+import axios, { type AxiosError } from 'axios';
+
+interface Context {
+  tone?: string;
+  length?: string;
+  [key: string]: any;
+}
+
+interface EnhancedPromptResult {
+  output: string | null;
+  requestsLeft: number | null;
+  limit: number | null;
+  enhanced?: boolean;
+  error: string | null;
+}
+
+interface IntentAnalysis {
+  intent: string;
+  confidence: number;
+  keywords: string[];
+  context: Record<string, string>;
+}
+
+interface IntentData {
+  keywords: string[];
+  weight: number;
+}
 
 class LLMService {
+  private isAvailable: boolean;
+
   constructor() {
     // No need for OpenAI client when using backend proxy
     this.isAvailable = true;
   }
 
-  async generateEnhancedPrompt(userInput, context = {}) {
+  async generateEnhancedPrompt(userInput: string, context: Context = {}): Promise<EnhancedPromptResult> {
     try {
       const requestBody = {
         prompt: userInput,
         context
       };
-      
+
       console.log('Sending request for AI enhancement...');
       const response = await axios.post('/api/generate', requestBody, {
         timeout: 30000, // 30 second timeout
@@ -20,13 +48,13 @@ class LLMService {
           'Content-Type': 'application/json'
         }
       });
-      
+
       console.log('API Response received:', {
         enhanced: response.data.enhanced,
         hasResult: !!response.data.result,
         requestsLeft: response.data.requestsLeft
       });
-      
+
       return {
         output: response.data.result,
         requestsLeft: response.data.requestsLeft,
@@ -36,19 +64,20 @@ class LLMService {
       };
     } catch (error) {
       console.error('API Error:', error);
-      
-      if (error.response && error.response.status === 429) {
+      const axiosError = error as AxiosError<any>;
+
+      if (axiosError.response && axiosError.response.status === 429) {
         return {
           output: null,
-          requestsLeft: error.response.data.requestsLeft,
-          limit: error.response.data.limit,
-          error: error.response.data.error || 'Monthly free request limit reached.'
+          requestsLeft: axiosError.response.data.requestsLeft,
+          limit: axiosError.response.data.limit,
+          error: axiosError.response.data.error || 'Monthly free request limit reached.'
         };
       }
-      
-      if (error.response && error.response.status === 500) {
-        const errorMessage = error.response?.data?.error || 'Service temporarily unavailable';
-        console.error('Server error details:', error.response.data);
+
+      if (axiosError.response && axiosError.response.status === 500) {
+        const errorMessage = axiosError.response?.data?.error || 'Service temporarily unavailable';
+        console.error('Server error details:', axiosError.response.data);
         return {
           output: null,
           requestsLeft: null,
@@ -56,26 +85,26 @@ class LLMService {
           error: `Service temporarily unavailable. Please try again in a moment.`
         };
       }
-      
+
       return {
         output: null,
         requestsLeft: null,
         limit: null,
-        error: error.response?.data?.error || error.message || 'Connection error. Please try again.'
+        error: axiosError.response?.data?.error || axiosError.message || 'Connection error. Please try again.'
       };
     }
   }
 
   // Simple client-side intent analysis for context enrichment
-  async analyzeIntent(userInput) {
+  async analyzeIntent(userInput: string): Promise<IntentAnalysis> {
     return this.localIntentAnalysis(userInput);
   }
 
-  localIntentAnalysis(userInput) {
+  private localIntentAnalysis(userInput: string): IntentAnalysis {
     const lowerInput = userInput.toLowerCase();
     const intent = this.detectIntent(lowerInput);
     const keywords = this.extractKeywords(userInput);
-    
+
     return {
       intent: intent,
       confidence: 0.8,
@@ -84,8 +113,8 @@ class LLMService {
     };
   }
 
-  detectIntent(input) {
-    const intents = {
+  private detectIntent(input: string): string {
+    const intents: Record<string, IntentData> = {
       'writing': {
         keywords: ['write', 'story', 'article', 'blog', 'content', 'essay', 'report', 'copy', 'script', 'narrative', 'review', 'description'],
         weight: 1
@@ -151,7 +180,7 @@ class LLMService {
           score += keyword.length > 5 ? 2 : 1;
         }
       });
-      
+
       if (score > highestScore) {
         highestScore = score;
         bestMatch = intent;
@@ -161,21 +190,21 @@ class LLMService {
     return bestMatch;
   }
 
-  extractKeywords(input) {
+  private extractKeywords(input: string): string[] {
     // Simple keyword extraction
     const words = input.toLowerCase().split(/\s+/);
     const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them']);
-    
-    return words.filter(word => 
-      word.length > 2 && 
-      !stopWords.has(word) && 
+
+    return words.filter(word =>
+      word.length > 2 &&
+      !stopWords.has(word) &&
       /^[a-zA-Z]+$/.test(word)
     ).slice(0, 10);
   }
 
-  extractContext(input) {
+  private extractContext(input: string): Record<string, string> {
     // Extract context clues from input
-    const context = {};
+    const context: Record<string, string> = {};
 
     if (input.includes('for') && input.includes('audience')) {
       context.audience = input.match(/for\s+([^,\.]+)/i)?.[1] || 'general';
@@ -193,4 +222,4 @@ class LLMService {
   }
 }
 
-export default new LLMService(); 
+export default new LLMService();

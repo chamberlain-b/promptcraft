@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import llmService from '../services/llmService';
 import contextService from '../services/contextService';
@@ -10,39 +10,130 @@ import {
   LENGTH_OPTIONS
 } from '../data/constants';
 
-const PromptContext = createContext(null);
+interface Suggestion {
+  type: string;
+  text: string;
+  icon: string;
+}
 
-const getDefaultTone = () => {
+interface HistoryItem {
+  id: string;
+  input: string;
+  output: string;
+  timestamp: string;
+}
+
+interface IntentAnalysis {
+  intent: string;
+  confidence: number;
+  keywords: string[];
+  context: Record<string, any>;
+}
+
+interface ContextInfo {
+  userPreferences: Record<string, any>;
+  sessionContext: Record<string, any>;
+  recentHistory: any[];
+  intentHistory: any[];
+  summary: any;
+  tone?: string;
+  length?: string;
+  [key: string]: any;
+}
+
+interface Example {
+  input: string;
+  output: string;
+  tone?: string;
+  length?: string;
+}
+
+interface PromptState {
+  input: string;
+  output: string;
+  isGenerating: boolean;
+  copied: boolean;
+  isListening: boolean;
+  recordingSupported: boolean;
+  history: HistoryItem[];
+  showHistory: boolean;
+  suggestions: Suggestion[];
+  showSettings: boolean;
+  currentIntent: IntentAnalysis | null;
+  contextInfo: ContextInfo | null;
+  llmStatus: 'checking' | 'enhanced' | 'error';
+  requestsLeft: number | null;
+  requestLimit: number | null;
+  currentTone: string;
+  currentLength: string;
+}
+
+interface PromptActions {
+  setShowHistory: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowSettings: React.Dispatch<React.SetStateAction<boolean>>;
+  setCurrentTone: React.Dispatch<React.SetStateAction<string>>;
+  setCurrentLength: React.Dispatch<React.SetStateAction<string>>;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
+  setOutput: React.Dispatch<React.SetStateAction<string>>;
+  applySuggestion: (suggestion: Suggestion) => void;
+  toggleVoiceRecording: () => void;
+  generatePrompt: () => Promise<void>;
+  copyToClipboard: () => Promise<void>;
+  useExample: (example: Example) => void;
+  clearAll: () => void;
+  loadFromHistory: (item: HistoryItem) => void;
+  deleteHistoryItem: (id: string) => void;
+  exportHistory: () => void;
+  clearHistory: () => void;
+  setIsListening: React.Dispatch<React.SetStateAction<boolean>>;
+  setHistory: React.Dispatch<React.SetStateAction<HistoryItem[]>>;
+  checkLlmStatus: () => void;
+  duplicatePrompt: (item: HistoryItem) => void;
+  importHistory: (items: HistoryItem[], strategy?: 'replace' | 'merge') => void;
+}
+
+interface PromptContextValue {
+  state: PromptState;
+  actions: PromptActions;
+}
+
+const PromptContext = createContext<PromptContextValue | null>(null);
+
+const getDefaultTone = (): string => {
   const preferences = contextService.getUserPreferences();
   return preferences.defaultTone || 'professional';
 };
 
-const getDefaultLength = () => {
+const getDefaultLength = (): string => {
   const preferences = contextService.getUserPreferences();
   return preferences.defaultLength || 'medium';
 };
 
-export const PromptProvider = ({ children }) => {
+interface PromptProviderProps {
+  children: ReactNode;
+}
+
+export const PromptProvider: React.FC<PromptProviderProps> = ({ children }) => {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [recordingSupported, setRecordingSupported] = useState(false);
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [currentIntent, setCurrentIntent] = useState(null);
-  const [contextInfo, setContextInfo] = useState(null);
-  const [llmStatus, setLlmStatus] = useState('checking');
-  const [requestsLeft, setRequestsLeft] = useState(null);
-  const [requestLimit, setRequestLimit] = useState(null);
+  const [currentIntent, setCurrentIntent] = useState<IntentAnalysis | null>(null);
+  const [contextInfo, setContextInfo] = useState<ContextInfo | null>(null);
+  const [llmStatus, setLlmStatus] = useState<'checking' | 'enhanced' | 'error'>('checking');
+  const [requestsLeft, setRequestsLeft] = useState<number | null>(null);
+  const [requestLimit, setRequestLimit] = useState<number | null>(null);
   const [currentTone, setCurrentTone] = useState(getDefaultTone);
   const [currentLength, setCurrentLength] = useState(getDefaultLength);
 
-  const recognitionRef = useRef(null);
-  const silenceTimerRef = useRef(null);
+  const recognitionRef = useRef<any>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('promptcraft-history');
@@ -60,8 +151,8 @@ export const PromptProvider = ({ children }) => {
     localStorage.setItem('promptcraft-history', JSON.stringify(history));
   }, [history]);
 
-  const generateSuggestions = useCallback((text) => {
-    const result = [];
+  const generateSuggestions = useCallback((text: string): Suggestion[] => {
+    const result: Suggestion[] = [];
     const trimmed = text.trim();
     if (!trimmed || trimmed.length < 10) return result;
 
@@ -134,7 +225,7 @@ export const PromptProvider = ({ children }) => {
     setSuggestions(generateSuggestions(input));
   }, [input, generateSuggestions]);
 
-  const applySuggestion = useCallback((suggestion) => {
+  const applySuggestion = useCallback((suggestion: Suggestion) => {
     setInput((prevInput) => {
       let updated = prevInput || '';
       switch (suggestion.type) {
@@ -197,12 +288,12 @@ export const PromptProvider = ({ children }) => {
 
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       setRecordingSupported(true);
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = true;
 
-      recognitionRef.current.onresult = (event) => {
+      recognitionRef.current.onresult = (event: any) => {
         let finalTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; i += 1) {
           if (event.results[i].isFinal) {
@@ -257,7 +348,7 @@ export const PromptProvider = ({ children }) => {
       setCurrentIntent(intentAnalysis);
 
       const userPreferences = contextService.getUserPreferences();
-      let context = { tone: currentTone, length: currentLength };
+      let context: ContextInfo = { tone: currentTone, length: currentLength } as ContextInfo;
 
       if (userPreferences.enableContext !== false) {
         const enhancedContext = contextService.getEnhancedContext(input.trim(), intentAnalysis.intent);
@@ -284,16 +375,16 @@ export const PromptProvider = ({ children }) => {
         setLlmStatus('error');
       }
 
-      setOutput(result.output);
+      setOutput(result.output || '');
 
       if (userPreferences.autoSave !== false) {
-        contextService.addToHistory(input.trim(), result.output, intentAnalysis);
+        contextService.addToHistory(input.trim(), result.output || '', intentAnalysis);
       }
 
-      const historyItem = {
+      const historyItem: HistoryItem = {
         id: uuidv4(),
         input: input.trim(),
-        output: result.output,
+        output: result.output || '',
         timestamp: new Date().toISOString()
       };
 
@@ -319,7 +410,7 @@ export const PromptProvider = ({ children }) => {
     }
   }, [output]);
 
-  const useExample = useCallback((example) => {
+  const useExample = useCallback((example: Example) => {
     setInput(example.input);
     setOutput(example.output);
 
@@ -350,12 +441,12 @@ export const PromptProvider = ({ children }) => {
     }
   }, []);
 
-  const loadFromHistory = useCallback((item) => {
+  const loadFromHistory = useCallback((item: HistoryItem) => {
     setInput(item.input);
     setOutput(item.output);
   }, []);
 
-  const deleteHistoryItem = useCallback((id) => {
+  const deleteHistoryItem = useCallback((id: string) => {
     setHistory((prev) => prev.filter((item) => item.id !== id));
     contextService.deleteHistoryItem(id);
   }, []);
@@ -375,7 +466,29 @@ export const PromptProvider = ({ children }) => {
     setLlmStatus('checking');
   }, []);
 
-  const contextValue = useMemo(() => ({
+  const duplicatePrompt = useCallback((item: HistoryItem) => {
+    const newItem: HistoryItem = {
+      ...item,
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+    };
+    setHistory((prev) => [newItem, ...prev]);
+    setInput(item.input);
+  }, []);
+
+  const importHistory = useCallback((items: HistoryItem[], strategy: 'replace' | 'merge' = 'merge') => {
+    if (strategy === 'replace') {
+      setHistory(items);
+    } else {
+      setHistory((prev) => {
+        const existingIds = new Set(prev.map((item) => item.id));
+        const newItems = items.filter((item) => !existingIds.has(item.id));
+        return [...prev, ...newItems];
+      });
+    }
+  }, []);
+
+  const contextValue = useMemo<PromptContextValue>(() => ({
     state: {
       input,
       output,
@@ -414,7 +527,9 @@ export const PromptProvider = ({ children }) => {
       clearHistory,
       setIsListening,
       setHistory,
-      checkLlmStatus
+      checkLlmStatus,
+      duplicatePrompt,
+      importHistory
     }
   }), [
     input,
@@ -444,7 +559,9 @@ export const PromptProvider = ({ children }) => {
     deleteHistoryItem,
     exportHistory,
     clearHistory,
-    checkLlmStatus
+    checkLlmStatus,
+    duplicatePrompt,
+    importHistory
   ]);
 
   return (
@@ -454,7 +571,7 @@ export const PromptProvider = ({ children }) => {
   );
 };
 
-export const usePrompt = () => {
+export const usePrompt = (): PromptContextValue => {
   const context = useContext(PromptContext);
   if (!context) {
     throw new Error('usePrompt must be used within a PromptProvider');

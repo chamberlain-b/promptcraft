@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import {
   Sparkles,
   Brain,
@@ -10,16 +10,24 @@ import {
   Trash2,
   Lightbulb,
   Plus,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  Copy
 } from 'lucide-react';
 import { usePrompt } from '../context/PromptContext';
-import type { HistoryItem, Suggestion } from '../context/PromptContext';
+import type { HistoryItem, Suggestion } from '../context/PromptContext.d';
 import {
   LENGTH_OPTIONS,
   TEXTAREA_MAX_HEIGHT,
   TEXTAREA_MIN_HEIGHT,
   TONE_OPTIONS
 } from '../data/constants';
+import CharacterCounter from './CharacterCounter';
+import SearchBar from './SearchBar';
+import EmptyState from './EmptyState';
+import ConfirmDialog from './ConfirmDialog';
+import { validatePromptInput, getWordCount } from '../utils/validation';
+import { exportToJSON, exportToCSV, importFromJSON, validateImportFile } from '../utils/exportImport';
 
 const InputPanel = () => {
   const {
@@ -49,11 +57,19 @@ const InputPanel = () => {
       loadFromHistory,
       deleteHistoryItem,
       exportHistory,
-      clearHistory
+      clearHistory,
+      duplicatePrompt,
+      importHistory
     }
   } = usePrompt();
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [validationError, setValidationError] = useState('');
+  const [showClearDialog, setShowClearDialog] = useState(false);
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const historyPanelId = 'prompt-history-panel';
   const suggestionsPanelId = 'smart-suggestions-panel';
 
@@ -70,12 +86,92 @@ const InputPanel = () => {
   }, [input]);
 
   const handleInputChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(event.target.value);
+    const value = event.target.value;
+    setInput(value);
+    
+    // Clear validation error when user starts typing
+    if (validationError && value.length > 0) {
+      setValidationError('');
+    }
   };
 
   const handleGenerate = () => {
+    const validation = validatePromptInput(input);
+    if (!validation.isValid) {
+      setValidationError(validation.error || 'Invalid input');
+      return;
+    }
+    setValidationError('');
     generatePrompt();
   };
+
+  const handleExportJSON = () => {
+    exportToJSON(history);
+  };
+
+  const handleExportCSV = () => {
+    exportToCSV(history);
+  };
+
+  const handleImport = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateImportFile(file);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
+
+    try {
+      const data = await importFromJSON(file);
+      importHistory(data.prompts, 'merge');
+      alert(`Successfully imported ${data.prompts.length} prompts`);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to import file');
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleClearHistory = () => {
+    setShowClearDialog(true);
+  };
+
+  const confirmClearHistory = () => {
+    clearHistory();
+    setShowClearDialog(false);
+  };
+
+  const handleDeleteItem = (id: string) => {
+    setDeleteItemId(id);
+  };
+
+  const confirmDeleteItem = () => {
+    if (deleteItemId) {
+      deleteHistoryItem(deleteItemId);
+      setDeleteItemId(null);
+    }
+  };
+
+  const handleDuplicateItem = (item: HistoryItem) => {
+    duplicatePrompt(item);
+  };
+
+  // Filter history based on search query
+  const filteredHistory = history.filter((item) =>
+    item.input.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.output.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const wordCount = getWordCount(input);
 
   return (
     <section
@@ -191,44 +287,86 @@ const InputPanel = () => {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={exportHistory}
-                className="p-1 text-gray-400 hover:text-gray-300"
-                title="Export history"
+                onClick={handleImport}
+                className="p-1.5 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded transition-colors"
+                title="Import history"
               >
-                <Download className="w-3 h-3" aria-hidden="true" />
+                <Upload className="w-4 h-4" aria-hidden="true" />
               </button>
               <button
                 type="button"
-                onClick={clearHistory}
-                className="p-1 text-red-400 hover:text-red-300"
+                onClick={handleExportJSON}
+                className="p-1.5 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded transition-colors"
+                title="Export as JSON"
+              >
+                <Download className="w-4 h-4" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={handleClearHistory}
+                className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors"
                 title="Clear history"
               >
-                <Trash2 className="w-3 h-3" aria-hidden="true" />
+                <Trash2 className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           </div>
-          <div className="max-h-32 overflow-y-auto space-y-2">
+
+          {history.length > 0 && (
+            <SearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search history..."
+              className="mb-3"
+            />
+          )}
+
+          <div className="max-h-64 overflow-y-auto space-y-2 custom-scrollbar">
             {history.length === 0 ? (
-              <p className="text-gray-500 text-sm">No history yet</p>
+              <EmptyState
+                icon={History}
+                title="No History Yet"
+                description="Your prompt history will appear here"
+              />
+            ) : filteredHistory.length === 0 ? (
+              <EmptyState
+                icon={History}
+                title="No Results"
+                description="No prompts match your search"
+              />
             ) : (
-              history.map((item: HistoryItem) => (
-                <div key={item.id} className="flex items-center justify-between bg-gray-700/30 rounded-lg p-2">
-                  <button
-                    type="button"
-                    onClick={() => loadFromHistory(item)}
-                    className="text-left flex-1 text-gray-300 text-sm hover:text-teal-300 transition-colors"
-                  >
-                    <p className="truncate">{item.input}</p>
-                    <p className="text-xs text-gray-500">{new Date(item.timestamp).toLocaleString()}</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteHistoryItem(item.id)}
-                    className="p-1 text-red-400 hover:text-red-300 ml-2"
-                    aria-label="Delete history item"
-                  >
-                    <Trash2 className="w-3 h-3" aria-hidden="true" />
-                  </button>
+              filteredHistory.map((item: HistoryItem) => (
+                <div key={item.id} className="bg-gray-700/30 rounded-lg p-3 hover:bg-gray-700/40 transition-colors">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => loadFromHistory(item)}
+                      className="text-left flex-1 text-gray-300 text-sm hover:text-primary-300 transition-colors"
+                    >
+                      <p className="truncate font-medium">{item.input}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(item.timestamp).toLocaleString()} • {getWordCount(item.input)} words
+                      </p>
+                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleDuplicateItem(item)}
+                        className="p-1.5 text-gray-400 hover:text-primary-300 hover:bg-primary-900/20 rounded transition-colors"
+                        title="Duplicate"
+                      >
+                        <Copy className="w-3.5 h-3.5" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors"
+                        aria-label="Delete history item"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))
             )}
@@ -236,17 +374,47 @@ const InputPanel = () => {
         </div>
       )}
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleFileChange}
+        className="hidden"
+        aria-label="Import history file"
+      />
+
       <div className="relative flex-1 card-container">
         <textarea
           ref={textareaRef}
           value={input}
           onChange={handleInputChange}
           placeholder="Type your basic idea here... (e.g., 'write a story about space travel', 'analyze sales data', 'create a meal plan')"
-          className="w-full auto-expand-textarea bg-gray-800/50 border border-gray-600/50 rounded-2xl p-6 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-teal-400/70 focus:border-teal-400 caret-teal-400 transition-all textarea-container custom-scrollbar"
+          className={`w-full auto-expand-textarea bg-gray-800/50 border rounded-2xl p-6 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 transition-all textarea-container custom-scrollbar ${
+            validationError
+              ? 'border-error-500 focus:ring-error-400/70 focus:border-error-400'
+              : 'border-gray-600/50 focus:ring-primary-400/70 focus:border-primary-400'
+          } caret-primary-400`}
           style={{ minHeight: TEXTAREA_MIN_HEIGHT, maxHeight: TEXTAREA_MAX_HEIGHT }}
           aria-label="Prompt input"
           aria-describedby={suggestions.length > 0 ? suggestionsPanelId : undefined}
+          aria-invalid={!!validationError}
         />
+        <div className="absolute bottom-3 right-3 flex items-center gap-3">
+          {validationError && (
+            <span className="text-xs text-error-400 font-medium">
+              {validationError}
+            </span>
+          )}
+          <CharacterCounter
+            current={input.length}
+            max={5000}
+            min={10}
+            className="text-xs"
+          />
+          <span className="text-xs text-gray-400">
+            {wordCount} {wordCount === 1 ? 'word' : 'words'}
+          </span>
+        </div>
       </div>
 
       {suggestions.length > 0 && (
@@ -315,6 +483,28 @@ const InputPanel = () => {
           Listening... speak now
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={showClearDialog}
+        title="Clear History?"
+        message="Are you sure you want to clear all history? This action cannot be undone."
+        confirmLabel="Clear All"
+        cancelLabel="Cancel"
+        confirmVariant="danger"
+        onConfirm={confirmClearHistory}
+        onCancel={() => setShowClearDialog(false)}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteItemId !== null}
+        title="Delete Prompt?"
+        message="Are you sure you want to delete this prompt from history?"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        confirmVariant="danger"
+        onConfirm={confirmDeleteItem}
+        onCancel={() => setDeleteItemId(null)}
+      />
     </section>
   );
 };

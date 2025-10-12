@@ -1,6 +1,75 @@
 import { v4 as uuidv4 } from 'uuid';
 
+interface Metadata {
+  intent?: string;
+  confidence?: number;
+  keywords?: string[];
+  context?: Record<string, any>;
+  [key: string]: any;
+}
+
+interface HistoryItem {
+  id: string;
+  input: string;
+  output: string;
+  timestamp: string;
+  metadata: Metadata;
+}
+
+interface ContextSummary {
+  input: string;
+  output: string;
+  intent?: string;
+  timestamp: string;
+}
+
+interface IntentContextSummary {
+  input: string;
+  output: string;
+  timestamp: string;
+}
+
+interface KeywordCount {
+  keyword: string;
+  count: number;
+}
+
+interface FullContextSummary {
+  totalInteractions: number;
+  recentInteractions: number;
+  intentDistribution: Record<string, number>;
+  commonKeywords: KeywordCount[];
+  lastInteraction?: string;
+}
+
+interface EnhancedContext {
+  userPreferences: Record<string, any>;
+  sessionContext: Record<string, any>;
+  recentHistory: ContextSummary[];
+  intentHistory: IntentContextSummary[];
+  summary: FullContextSummary;
+  continuation?: boolean;
+  previousOutput?: string;
+  similarRequests?: SimilarRequest[];
+}
+
+interface SimilarRequest extends HistoryItem {
+  similarity: number;
+}
+
+interface ExportData {
+  conversationHistory: HistoryItem[];
+  userPreferences: Record<string, any>;
+  sessionContext: Record<string, any>;
+  exportDate: string;
+  version: string;
+}
+
 class ContextService {
+  private conversationHistory: HistoryItem[];
+  private userPreferences: Record<string, any>;
+  private sessionContext: Record<string, any>;
+
   constructor() {
     this.conversationHistory = [];
     this.userPreferences = {};
@@ -8,12 +77,12 @@ class ContextService {
     this.loadFromStorage();
   }
 
-  loadFromStorage() {
+  private loadFromStorage(): void {
     try {
       const savedHistory = localStorage.getItem('promptcraft-conversation-history');
       const savedPreferences = localStorage.getItem('promptcraft-user-preferences');
       const savedSession = localStorage.getItem('promptcraft-session-context');
-      
+
       if (savedHistory) {
         this.conversationHistory = JSON.parse(savedHistory);
       }
@@ -28,7 +97,7 @@ class ContextService {
     }
   }
 
-  saveToStorage() {
+  private saveToStorage(): void {
     try {
       localStorage.setItem('promptcraft-conversation-history', JSON.stringify(this.conversationHistory));
       localStorage.setItem('promptcraft-user-preferences', JSON.stringify(this.userPreferences));
@@ -38,8 +107,8 @@ class ContextService {
     }
   }
 
-  addToHistory(input, output, metadata = {}) {
-    const historyItem = {
+  addToHistory(input: string, output: string, metadata: Metadata = {}): HistoryItem {
+    const historyItem: HistoryItem = {
       id: uuidv4(),
       input,
       output,
@@ -54,7 +123,7 @@ class ContextService {
     };
 
     this.conversationHistory.unshift(historyItem);
-    
+
     // Keep only last 50 items to prevent storage bloat
     if (this.conversationHistory.length > 50) {
       this.conversationHistory = this.conversationHistory.slice(0, 50);
@@ -64,7 +133,7 @@ class ContextService {
     return historyItem;
   }
 
-  getRecentContext(limit = 5) {
+  getRecentContext(limit: number = 5): ContextSummary[] {
     return this.conversationHistory.slice(0, limit).map(item => ({
       input: item.input,
       output: item.output,
@@ -73,7 +142,7 @@ class ContextService {
     }));
   }
 
-  getContextForIntent(intent, limit = 3) {
+  getContextForIntent(intent: string, limit: number = 3): IntentContextSummary[] {
     return this.conversationHistory
       .filter(item => item.metadata.intent === intent)
       .slice(0, limit)
@@ -84,51 +153,51 @@ class ContextService {
       }));
   }
 
-  updateUserPreferences(preferences) {
+  updateUserPreferences(preferences: Record<string, any>): void {
     this.userPreferences = { ...this.userPreferences, ...preferences };
     this.saveToStorage();
   }
 
-  getUserPreferences() {
+  getUserPreferences(): Record<string, any> {
     return this.userPreferences;
   }
 
-  updateSessionContext(context) {
+  updateSessionContext(context: Record<string, any>): void {
     this.sessionContext = { ...this.sessionContext, ...context };
     this.saveToStorage();
   }
 
-  getSessionContext() {
+  getSessionContext(): Record<string, any> {
     return this.sessionContext;
   }
 
-  clearSessionContext() {
+  clearSessionContext(): void {
     this.sessionContext = {};
     this.saveToStorage();
   }
 
-  clearHistory() {
+  clearHistory(): void {
     this.conversationHistory = [];
     this.saveToStorage();
   }
 
-  deleteHistoryItem(id) {
+  deleteHistoryItem(id: string): void {
     this.conversationHistory = this.conversationHistory.filter(item => item.id !== id);
     this.saveToStorage();
   }
 
-  getContextSummary() {
+  getContextSummary(): FullContextSummary {
     const recentItems = this.conversationHistory.slice(0, 10);
-    const intentCounts = {};
-    const commonKeywords = new Map();
-    
+    const intentCounts: Record<string, number> = {};
+    const commonKeywords = new Map<string, number>();
+
     recentItems.forEach(item => {
       // Count intents
-      const intent = item.metadata.intent;
+      const intent = item.metadata.intent || 'general';
       intentCounts[intent] = (intentCounts[intent] || 0) + 1;
-      
+
       // Count keywords
-      item.metadata.keywords.forEach(keyword => {
+      item.metadata.keywords?.forEach(keyword => {
         commonKeywords.set(keyword, (commonKeywords.get(keyword) || 0) + 1);
       });
     });
@@ -147,8 +216,8 @@ class ContextService {
     };
   }
 
-  getEnhancedContext(userInput, intent) {
-    const context = {
+  getEnhancedContext(userInput: string, intent: string): EnhancedContext {
+    const context: EnhancedContext = {
       userPreferences: this.userPreferences,
       sessionContext: this.sessionContext,
       recentHistory: this.getRecentContext(3),
@@ -158,7 +227,7 @@ class ContextService {
 
     // Add relevant context based on user input
     const lowerInput = userInput.toLowerCase();
-    
+
     if (lowerInput.includes('continue') || lowerInput.includes('follow up')) {
       context.continuation = true;
       context.previousOutput = this.conversationHistory[0]?.output;
@@ -171,9 +240,9 @@ class ContextService {
     return context;
   }
 
-  findSimilarRequests(userInput, limit = 3) {
+  private findSimilarRequests(userInput: string, limit: number = 3): SimilarRequest[] {
     const inputWords = userInput.toLowerCase().split(/\s+/).filter(word => word.length > 3);
-    
+
     return this.conversationHistory
       .map(item => ({
         ...item,
@@ -184,17 +253,17 @@ class ContextService {
       .slice(0, limit);
   }
 
-  calculateSimilarity(words1, words2) {
+  private calculateSimilarity(words1: string[], words2: string[]): number {
     const set1 = new Set(words1);
     const set2 = new Set(words2);
     const intersection = new Set([...set1].filter(x => set2.has(x)));
     const union = new Set([...set1, ...set2]);
-    
+
     return intersection.size / union.size;
   }
 
-  exportHistory() {
-    const exportData = {
+  exportHistory(): void {
+    const exportData: ExportData = {
       conversationHistory: this.conversationHistory,
       userPreferences: this.userPreferences,
       sessionContext: this.sessionContext,
@@ -213,13 +282,13 @@ class ContextService {
     URL.revokeObjectURL(url);
   }
 
-  importHistory(file) {
+  importHistory(file: File): Promise<boolean> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const data = JSON.parse(e.target.result);
-          
+          const data = JSON.parse(e.target?.result as string) as ExportData;
+
           if (data.conversationHistory) {
             this.conversationHistory = data.conversationHistory;
           }
@@ -229,7 +298,7 @@ class ContextService {
           if (data.sessionContext) {
             this.sessionContext = data.sessionContext;
           }
-          
+
           this.saveToStorage();
           resolve(true);
         } catch (error) {
@@ -242,4 +311,4 @@ class ContextService {
   }
 }
 
-export default new ContextService(); 
+export default new ContextService();

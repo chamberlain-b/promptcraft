@@ -1,9 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { type FC, useState, useEffect, useRef } from 'react';
 import { Settings as SettingsIcon, User, Save, Download, Upload, Trash2 } from 'lucide-react';
 import contextService from '../services/contextService';
 
-const Settings = ({ isOpen, onClose }) => {
-  const [preferences, setPreferences] = useState({
+interface UserPreferences {
+  defaultTone: string;
+  defaultLength: string;
+  enableContext: boolean;
+  enableSuggestions: boolean;
+  autoSave: boolean;
+}
+
+interface SettingsProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
+  const [preferences, setPreferences] = useState<UserPreferences>({
     defaultTone: 'professional',
     defaultLength: 'medium',
     enableContext: true,
@@ -12,7 +25,7 @@ const Settings = ({ isOpen, onClose }) => {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
-  const dialogRef = useRef(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -22,12 +35,12 @@ const Settings = ({ isOpen, onClose }) => {
 
     const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
     const dialogNode = dialogRef.current;
-    const focusable = dialogNode ? Array.from(dialogNode.querySelectorAll(focusableSelector)) : [];
+    const focusable = dialogNode ? Array.from(dialogNode.querySelectorAll<HTMLElement>(focusableSelector)) : [];
     if (focusable.length > 0) {
       focusable[0].focus();
     }
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
         onClose();
@@ -77,12 +90,13 @@ const Settings = ({ isOpen, onClose }) => {
       setMessage('Data exported successfully!');
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
-      setMessage('Error exporting data: ' + error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setMessage('Error exporting data: ' + errorMessage);
     }
   };
 
-  const handleImportData = (event) => {
-    const file = event.target.files[0];
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       contextService.importHistory(file)
         .then(() => {
@@ -90,7 +104,8 @@ const Settings = ({ isOpen, onClose }) => {
           setTimeout(() => setMessage(''), 3000);
         })
         .catch(error => {
-          setMessage('Error importing data: ' + error.message);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          setMessage('Error importing data: ' + errorMessage);
         });
     }
   };

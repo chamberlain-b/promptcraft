@@ -1,5 +1,5 @@
 import { PenTool, Code, Brain, Calendar, MessageSquare, Sparkles } from 'lucide-react';
-import type { ExampleItem } from '../context/PromptContext';
+import type { ExampleItem } from '../context/PromptContext.d';
 
 export const examples: ExampleItem[] = [
   {
