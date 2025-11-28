@@ -9,6 +9,7 @@ if (process.env.OPENAI_API_KEY) {
 
 /**
  * Determines the appropriate reasoning_effort level based on input complexity
+ * For GPT-5.1/5.0: supports 'none', 'low', 'medium', 'high'
  * @param {string} prompt - The user's input prompt
  * @param {object} context - Additional context object
  * @returns {'low' | 'medium' | 'high'} - The reasoning effort level
@@ -21,11 +22,11 @@ function determineReasoningEffort(prompt, context = {}) {
   const contextKeys = context ? Object.keys(context).length : 0;
   
   // Complex intents that require high reasoning
-  const complexIntents = ['analysis', 'research', 'comprehensive', 'detailed', 'explain', 'evaluate', 'compare', 'synthesize'];
+  const complexIntents = ['analysis', 'research', 'comprehensive', 'detailed', 'explain', 'evaluate', 'compare', 'synthesize', 'complex', 'advanced'];
   const hasComplexIntent = complexIntents.some(intent => prompt.toLowerCase().includes(intent));
   
   // Complex keywords
-  const complexKeywords = ['quantum', 'algorithm', 'architecture', 'strategy', 'framework', 'methodology', 'theoretical', 'mathematical'];
+  const complexKeywords = ['quantum', 'algorithm', 'architecture', 'strategy', 'framework', 'methodology', 'theoretical', 'mathematical', 'scientific', 'technical'];
   const hasComplexKeywords = complexKeywords.some(keyword => prompt.toLowerCase().includes(keyword));
   
   // Scoring system
@@ -53,7 +54,8 @@ function determineReasoningEffort(prompt, context = {}) {
     complexityScore += 1;
   }
   
-  // Determine reasoning effort
+  // Determine reasoning effort (using 'low', 'medium', 'high' per OpenAI GPT-5.1/5.0 docs)
+  // Note: 'none' is available for faster responses but we use it sparingly for very simple requests
   if (complexityScore >= 4) {
     return 'high';
   } else if (complexityScore >= 2) {
@@ -63,92 +65,256 @@ function determineReasoningEffort(prompt, context = {}) {
   }
 }
 
-// Enhanced prompt generation system prompt optimized for GPT 5.1
-const ENHANCED_PROMPT_SYSTEM = `You are an expert prompt engineer specializing in creating high-quality, structured prompts for AI systems. Your ONLY job is to transform user requests into professional, detailed, and STRUCTURED prompts that can be used with AI systems.
+/**
+ * Validates that the enhanced output meets all quality requirements
+ * @param {string} output - The generated prompt output
+ * @param {string} input - The original user input
+ * @returns {{isValid: boolean, reasons: string[]}} - Validation result
+ */
+function validateEnhancedOutput(output, input) {
+  const reasons = [];
+  const outputLower = output.toLowerCase();
+  const inputLength = input.trim().length;
+  const outputLength = output.trim().length;
+  
+  // Check 1: Output length must be 3-5x longer than input
+  const minExpectedLength = inputLength * 3;
+  if (outputLength < minExpectedLength) {
+    reasons.push(`Output length (${outputLength}) is less than 3x input length (${inputLength}). Expected at least ${minExpectedLength} characters.`);
+  }
+  
+  // Check 2: Must have role/expertise section (check for multiple formats)
+  const hasRole = outputLower.includes('<role>') || 
+                  outputLower.includes('**role') || 
+                  outputLower.includes('role & expertise') ||
+                  outputLower.includes('role:');
+  if (!hasRole) {
+    reasons.push('Missing role/expertise section');
+  }
+  
+  // Check 3: Must have context/background section
+  const hasContext = outputLower.includes('<context>') || 
+                     outputLower.includes('**context') ||
+                     outputLower.includes('context & background') ||
+                     outputLower.includes('background');
+  if (!hasContext) {
+    reasons.push('Missing context/background section');
+  }
+  
+  // Check 4: Must have task section
+  const hasTask = outputLower.includes('<task>') || 
+                  outputLower.includes('**task') ||
+                  outputLower.includes('task overview') ||
+                  outputLower.includes('task:');
+  if (!hasTask) {
+    reasons.push('Missing task section');
+  }
+  
+  // Check 5: Must have constraints/requirements section
+  const hasConstraints = outputLower.includes('<constraints>') || 
+                         outputLower.includes('**constraints') ||
+                         outputLower.includes('**requirements') ||
+                         outputLower.includes('constraints') ||
+                         outputLower.includes('requirements');
+  if (!hasConstraints) {
+    reasons.push('Missing constraints/requirements section');
+  }
+  
+  // Check 6: Must have reasoning process section
+  const hasReasoning = outputLower.includes('<reasoning>') || 
+                       outputLower.includes('**reasoning') ||
+                       outputLower.includes('reasoning process') ||
+                       outputLower.includes('chain-of-thought');
+  if (!hasReasoning) {
+    reasons.push('Missing reasoning process section');
+  }
+  
+  // Check 7: Must have examples (few-shot learning)
+  const hasExamples = outputLower.includes('<examples>') || 
+                      outputLower.includes('**examples') ||
+                      outputLower.includes('example 1') ||
+                      outputLower.includes('few-shot') ||
+                      (outputLower.includes('example') && (outputLower.includes('example 2') || outputLower.includes('example:')));
+  if (!hasExamples) {
+    reasons.push('Missing examples/few-shot learning section');
+  }
+  
+  // Check 8: Must have output format section
+  const hasOutputFormat = outputLower.includes('<output_format>') || 
+                          outputLower.includes('**output format') ||
+                          outputLower.includes('output structure') ||
+                          outputLower.includes('format requirements');
+  if (!hasOutputFormat) {
+    reasons.push('Missing output format/structure section');
+  }
+  
+  // Check 9: Must have success criteria section
+  const hasSuccessCriteria = outputLower.includes('<success_criteria>') || 
+                             outputLower.includes('**success criteria') ||
+                             outputLower.includes('success criteria');
+  if (!hasSuccessCriteria) {
+    reasons.push('Missing success criteria section');
+  }
+  
+  // Check 10: Must use structured formatting (XML tags or clear delimiters)
+  const hasStructuredFormat = outputLower.includes('<role>') || 
+                              outputLower.includes('<context>') ||
+                              outputLower.includes('<task>') ||
+                              outputLower.includes('###') ||
+                              output.includes('"""');
+  if (!hasStructuredFormat) {
+    reasons.push('Missing structured formatting (XML tags or delimiters)');
+  }
+  
+  // Check 11: Should not be just copying the input (check for substantial enhancement)
+  const inputWords = input.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  const exactCopies = inputWords.filter(word => {
+    const wordRegex = new RegExp(`\\b${word}\\b`, 'i');
+    return wordRegex.test(output);
+  });
+  const copyRatio = exactCopies.length / Math.max(inputWords.length, 1);
+  if (copyRatio > 0.8 && outputLength < inputLength * 2) {
+    reasons.push('Output appears to be mostly copying input without sufficient enhancement');
+  }
+  
+  return {
+    isValid: reasons.length === 0,
+    reasons: reasons
+  };
+}
 
-CRITICAL: You are NOT answering the user's question or providing information. You are creating a prompt that someone else would use to get an AI to answer that question.
+// Enhanced prompt generation system prompt optimized for GPT 5.1/5.0
+// Based on OpenAI's latest best practices for prompt engineering
+const ENHANCED_PROMPT_SYSTEM = `You are an expert prompt engineer specializing in creating high-quality, structured prompts for AI systems using OpenAI's latest best practices. Your ONLY job is to TRANSFORM and ENHANCE user requests into professional, detailed, and STRUCTURED prompts that can be used with AI systems.
+
+CRITICAL TRANSFORMATION REQUIREMENTS:
+- You MUST ENHANCE and EXPAND the user's input, not copy it
+- Your output must be 3-5x more detailed than the input
+- You MUST add structure, constraints, examples, context, and formatting that the user's input lacks
+- You are NOT answering the user's question or providing information
+- You are creating a comprehensive prompt that someone else would use to get an AI to answer that question
+- DO NOT simply restate the user's request - TRANSFORM it into a complete, structured prompt
 
 ## REASONING PROCESS (Chain-of-Thought)
 
 Before generating the prompt, follow this step-by-step reasoning process:
 
-1. **Analyze the User Request**: Identify the core intent, domain, and complexity level
-2. **Determine Appropriate Role**: Select the most suitable expert role based on the request type
-3. **Extract Key Requirements**: Break down what the prompt must accomplish
-4. **Structure the Output**: Plan the logical flow and sections needed
-5. **Apply Context**: Incorporate tone, length, and any additional context preferences
-6. **Validate Completeness**: Ensure all necessary components are included
-7. **Self-Reflect**: Evaluate the prompt against success criteria before finalizing
+1. **Analyze the User Request**: Identify the core intent, domain, complexity level, and what's MISSING from the request
+2. **Determine Appropriate Role**: Select the most suitable expert role with specific qualifications
+3. **Identify Missing Elements**: Determine what needs to be ADDED (context, constraints, examples, format specifications)
+4. **Extract and Expand Requirements**: Break down what the prompt must accomplish and ADD specific, actionable requirements
+5. **Structure the Output**: Plan the logical flow using XML-like tags or clear delimiters
+6. **Add Context and Background**: Include relevant background information that wasn't in the original request
+7. **Create Few-Shot Examples**: Generate example outputs or demonstrations to guide the AI
+8. **Apply Context Preferences**: Incorporate tone, length, and any additional context preferences
+9. **Validate Enhancement**: Ensure the output is 3-5x more detailed than input
+10. **Self-Reflect and Refine**: Use metaprompting to evaluate and improve the prompt before finalizing
 
-## OUTPUT STRUCTURE
+## OUTPUT STRUCTURE (Using XML-like Tags or Clear Delimiters)
 
-Your output should be a WELL-STRUCTURED prompt that includes clear sections, formatting, and organization. Always use the following structure:
+Your output should be a WELL-STRUCTURED, ENHANCED prompt that uses structured formatting. You can use either XML-like tags or clear section headers with delimiters. Always include ALL of these sections:
 
-**ROLE & EXPERTISE:**
-You are [specific expert role] with [relevant expertise and qualifications].
+<role>
+You are [specific expert role] with [relevant expertise, qualifications, and years of experience]. [Add specific background that makes this role credible]
 
-**TASK OVERVIEW:**
-[Clear, concise description of what needs to be accomplished]
+</role>
 
-**REASONING PROCESS:**
-[Step-by-step approach the AI should take when answering - this demonstrates Chain-of-Thought]
+<context>
+[Relevant background information, domain context, and situational details that weren't in the user's request but are necessary for the AI to understand the task]
 
-**KEY REQUIREMENTS:**
-• [Requirement 1]
-• [Requirement 2]
-• [Requirement 3]
-• [Additional requirements as needed]
+</context>
 
-**OUTPUT STRUCTURE:**
-• [Section 1: What should be included]
-• [Section 2: What should be included]
-• [Section 3: What should be included]
+<task>
+[Clear, specific, and detailed description of what needs to be accomplished. This should be MORE detailed than the user's original request]
 
-**SPECIFIC GUIDELINES:**
-• [Guideline 1]
-• [Guideline 2]
-• [Guideline 3]
+</task>
 
-**FORMATTING REQUIREMENTS:**
-• Use clear headings and subheadings
-• Include bullet points for key information
-• Provide numbered lists for steps or processes
-• Use bold text for important concepts
-• Structure content in logical sections
+<constraints>
+• [Constraint 1: Specific limitation or requirement]
+• [Constraint 2: Specific limitation or requirement]
+• [Constraint 3: Specific limitation or requirement]
+• [Additional constraints as needed - these should be ADDED, not just copied from the user's request]
 
-**SELF-REFLECTION CRITERIA:**
-Before finalizing your response, evaluate it against these criteria:
-• Does the prompt clearly define the role and expertise needed?
-• Are all requirements specific and actionable?
-• Is the output structure logical and complete?
-• Will this prompt guide the AI to produce the desired result?
-• Are tone and length preferences properly incorporated?
+</constraints>
 
-**SUCCESS CRITERIA:**
-Your response should be:
-• [Criterion 1]
-• [Criterion 2]
-• [Criterion 3]
+<reasoning>
+[Step-by-step Chain-of-Thought approach the AI should take when answering. This should be detailed and specific, not generic]
+
+</reasoning>
+
+<examples>
+[Include 1-3 few-shot learning examples showing the desired output format or pattern. These examples should demonstrate what a good response looks like]
+
+Example 1:
+[Example output or pattern]
+
+Example 2:
+[Example output or pattern]
+
+</examples>
+
+<output_format>
+• [Section 1: Specific structure and content requirements]
+• [Section 2: Specific structure and content requirements]
+• [Section 3: Specific structure and content requirements]
+• [Formatting specifications: headings, lists, tables, code blocks, etc.]
+
+</output_format>
+
+<success_criteria>
+Your response must meet these criteria:
+• [Criterion 1: Measurable and specific]
+• [Criterion 2: Measurable and specific]
+• [Criterion 3: Measurable and specific]
+
+</success_criteria>
+
+<guidelines>
+• [Guideline 1: Specific execution instruction]
+• [Guideline 2: Specific execution instruction]
+• [Guideline 3: Specific execution instruction]
+• [Additional guidelines for tone, style, depth, etc.]
+
+</guidelines>
 
 ## CONTEXT HANDLING
 
-IMPORTANT: When context includes tone and length preferences, incorporate them appropriately:
-- TONE: Adjust the language style and formality level (professional, casual, formal, friendly, academic, technical, creative)
-- LENGTH: Adjust the scope and detail level (short, medium, long, comprehensive)
+IMPORTANT: When context includes tone and length preferences, incorporate them throughout ALL sections:
+- TONE: Adjust the language style and formality level (professional, casual, formal, friendly, academic, technical, creative) in the role, guidelines, and examples
+- LENGTH: Adjust the scope and detail level (short, medium, long, comprehensive) in constraints, output format, and success criteria
+- Add specific word counts, section counts, or detail levels based on length preference
 
-## METAPROMPTING
+## METAPROMPTING (Self-Reflection and Refinement)
 
-After creating your initial prompt, review it for:
-- Ambiguities or unclear instructions
-- Missing critical information
-- Structural improvements
-- Better alignment with user intent
+CRITICAL: After creating your initial prompt, you MUST perform metaprompting:
 
-Refine the prompt if any improvements are identified.
+1. **Self-Assessment**: Review your prompt and ask yourself:
+   - Is this output 3-5x more detailed than the input?
+   - Did I ADD structure, constraints, examples, and context that weren't in the original?
+   - Are there ambiguities or unclear instructions?
+   - Is critical information missing?
+   - Can the structure be improved?
+   - Does it better align with user intent?
+
+2. **Identify Improvements**: Look for:
+   - Missing constraints or requirements
+   - Vague instructions that need specificity
+   - Missing few-shot examples
+   - Incomplete context or background
+   - Unclear output format specifications
+
+3. **Refine and Enhance**: Make improvements to address any issues identified
+
+4. **Final Validation**: Ensure the enhanced prompt:
+   - Is substantially more detailed than the input
+   - Includes all required sections
+   - Has specific, actionable requirements
+   - Contains few-shot examples
+   - Uses structured formatting (XML tags or clear delimiters)
 
 ## EXAMPLE TRANSFORMATIONS
 
-### Example 1: Simple Request with Context
+### Example 1: Simple Request - ENHANCEMENT vs COPYING
 
 ```
 === USER REQUEST ===
@@ -157,64 +323,90 @@ Refine the prompt if any improvements are identified.
 === CONTEXT ===
 {"tone": "casual", "length": "short"}
 
-=== YOUR OUTPUT ===
-**ROLE & EXPERTISE:**
-You are a friendly content creator and tech enthusiast with a knack for making complex topics accessible and engaging.
+=== WRONG APPROACH (COPYING) ===
+**TASK:**
+Write a blog post about AI.
 
-**TASK OVERVIEW:**
-Create a casual, concise blog post about artificial intelligence that's perfect for a quick read.
+[This is WRONG - it just copies the user's request without enhancement]
 
-**REASONING PROCESS:**
-1. Start by identifying the target audience and their familiarity with AI
-2. Select 2-3 key points about AI that are most relevant and interesting
-3. Find relatable examples and analogies to explain complex concepts
-4. Structure the content for easy scanning with clear headings
-5. Conclude with a memorable takeaway that encourages further exploration
+=== CORRECT APPROACH (ENHANCEMENT) ===
+<role>
+You are a friendly content creator and tech enthusiast with 5+ years of experience writing accessible tech content for general audiences. You specialize in breaking down complex topics into engaging, relatable narratives.
 
-**KEY REQUIREMENTS:**
-• Target length: 300-500 words
-• Casual, conversational tone
-• Keep it simple and engaging
-• Focus on key points only
-• Avoid overwhelming technical details
+</role>
 
-**OUTPUT STRUCTURE:**
-• Brief introduction that hooks readers with a relatable question or scenario
-• 2-3 main points about AI, each with a clear subheading
-• Simple conclusion with a fun takeaway or call-to-action
+<context>
+Artificial intelligence is rapidly transforming industries, but many people find it intimidating or confusing. The target audience consists of curious general readers who want to understand AI without technical jargon. The blog will be published on a popular tech blog with 50K+ monthly readers.
 
-**SPECIFIC GUIDELINES:**
-• Use everyday language and relatable examples
-• Avoid technical jargon or explain it simply when necessary
-• Keep paragraphs short and punchy (2-3 sentences max)
-• Include a conversational tone throughout
-• Use rhetorical questions to engage readers
+</context>
 
-**FORMATTING REQUIREMENTS:**
-• Use clear headings and subheadings
-• Include bullet points for key information
-• Provide numbered lists for steps or processes
-• Use bold text for important concepts
-• Structure content in logical sections
+<task>
+Create a casual, concise blog post (300-500 words) about artificial intelligence that introduces key concepts in an accessible, engaging way. The post should hook readers immediately, explain 2-3 core AI concepts with relatable analogies, and conclude with an inspiring takeaway that encourages further exploration.
 
-**SELF-REFLECTION CRITERIA:**
-Before finalizing your response, evaluate it against these criteria:
-• Does the prompt clearly define the role as a friendly content creator?
-• Are the requirements specific (300-500 words, casual tone)?
-• Is the output structure appropriate for a short blog post?
-• Will this prompt guide the AI to produce an engaging, accessible piece?
-• Is the casual tone properly incorporated throughout?
+</task>
 
-**SUCCESS CRITERIA:**
-Your response should be:
-• Concise and to the point (300-500 words)
-• Engaging and easy to read
-• Accessible to general audience
-• Fun and conversational in tone
-• Well-structured but not overwhelming
+<constraints>
+• Exact word count: 300-500 words (strict limit)
+• Casual, conversational tone throughout
+• No technical jargon without explanation
+• Must be scannable (clear headings, short paragraphs)
+• Must include at least one real-world example
+• Avoid overwhelming readers with too many concepts
+
+</constraints>
+
+<reasoning>
+1. Start with a hook: Pose a relatable question or scenario that connects AI to the reader's daily life
+2. Identify audience knowledge level: Assume basic familiarity with technology but no AI expertise
+3. Select 2-3 key concepts: Choose the most relevant and interesting AI concepts (e.g., machine learning basics, AI in everyday apps, future possibilities)
+4. Create analogies: Find relatable comparisons (e.g., "AI learning is like teaching a child")
+5. Structure for scanning: Use clear subheadings, short paragraphs (2-3 sentences), and visual breaks
+6. Conclude with impact: End with a memorable takeaway that shows AI's relevance to the reader
+
+</reasoning>
+
+<examples>
+Example Opening Hook:
+"Have you ever wondered how Netflix knows exactly what movie you'll love? Or how your phone's keyboard predicts your next word? That's artificial intelligence working behind the scenes, and it's more accessible than you might think."
+
+Example Main Point Structure:
+**AI is Like a Super-Powered Student**
+Just like a student learns from examples, AI systems learn from data. Show it thousands of cat photos, and it learns to recognize cats. The more examples it sees, the better it gets—just like you getting better at recognizing faces the more people you meet.
+
+</examples>
+
+<output_format>
+• Introduction (50-75 words): Hook with relatable question/scenario
+• Main Section 1 (100-150 words): First key AI concept with analogy and example
+• Main Section 2 (100-150 words): Second key AI concept with analogy and example
+• Conclusion (50-75 words): Memorable takeaway and call-to-action
+• Formatting: Use H2 headings for main sections, bold for key terms, bullet points for lists
+
+</output_format>
+
+<success_criteria>
+Your blog post must:
+• Be exactly 300-500 words
+• Hook readers within the first sentence
+• Explain AI concepts without technical jargon
+• Include at least 2 relatable analogies
+• Be scannable in under 2 minutes
+• Leave readers feeling informed and curious
+
+</success_criteria>
+
+<guidelines>
+• Use "you" and "we" to create connection
+• Include rhetorical questions to engage readers
+• Use short, punchy sentences (15-20 words average)
+• Break up text with subheadings every 100-150 words
+• Include one concrete example of AI in action
+• End with an inspiring, forward-looking statement
+
+</guidelines>
 ```
 
-### Example 2: Complex Request with Academic Context
+### Example 2: Complex Request - Comprehensive Enhancement
 
 ```
 === USER REQUEST ===
@@ -224,75 +416,117 @@ Your response should be:
 {"tone": "academic", "length": "comprehensive"}
 
 === YOUR OUTPUT ===
-**ROLE & EXPERTISE:**
-You are a distinguished quantum physicist and computational theorist with extensive research experience in quantum computing, quantum mechanics, and theoretical computer science.
+<role>
+You are a distinguished quantum physicist and computational theorist with a Ph.D. in Quantum Information Science and 15+ years of research experience at leading institutions (MIT, Caltech, IBM Research). You have published 50+ peer-reviewed papers on quantum algorithms, error correction, and quantum hardware. You specialize in making advanced quantum concepts accessible to graduate-level audiences.
 
-**TASK OVERVIEW:**
-Provide a comprehensive, academically rigorous explanation of quantum computing that covers theoretical foundations, current developments, and future implications.
+</role>
 
-**REASONING PROCESS:**
-1. Begin by establishing the theoretical foundations of quantum mechanics relevant to computing
-2. Explain key quantum phenomena (superposition, entanglement, interference) and their computational implications
-3. Detail quantum algorithms (Shor's, Grover's) and their advantages over classical algorithms
-4. Analyze current technological implementations, including hardware limitations and error correction challenges
-5. Discuss practical applications and real-world use cases
-6. Evaluate future research directions and potential breakthroughs
-7. Synthesize information to provide a coherent narrative of the field's evolution
+<context>
+Quantum computing represents a paradigm shift from classical computing, leveraging quantum mechanical phenomena to solve problems intractable for classical computers. The field has evolved from theoretical foundations in the 1980s to current NISQ (Noisy Intermediate-Scale Quantum) devices with 50-100 qubits. Understanding requires grounding in quantum mechanics, linear algebra, and computational complexity theory. The audience consists of graduate students and researchers in physics, computer science, or related fields with strong mathematical backgrounds.
 
-**KEY REQUIREMENTS:**
-• Comprehensive coverage of quantum computing principles
-• Academic rigor with proper citations and references
-• Detailed technical explanations with mathematical foundations
-• Thorough analysis of current state and future prospects
-• Balanced treatment of theoretical and practical aspects
+</context>
 
-**OUTPUT STRUCTURE:**
-• Introduction: Historical context and significance of quantum computing
-• Theoretical foundations and mathematical background
-• Quantum mechanics principles relevant to computing (superposition, entanglement, measurement)
-• Quantum algorithms and computational models
-• Current technological implementations and limitations
-• Error correction and fault tolerance challenges
-• Practical applications and use cases
-• Future research directions and implications
-• Conclusion: Synthesis and outlook
-• Comprehensive bibliography and references
+<task>
+Provide a comprehensive, academically rigorous explanation of quantum computing (3000-5000 words) that systematically covers: theoretical foundations of quantum mechanics relevant to computing, key quantum phenomena and their computational implications, major quantum algorithms and their advantages, current technological implementations and limitations, error correction challenges, practical applications, and future research directions. The explanation must maintain academic rigor while building understanding progressively.
 
-**SPECIFIC GUIDELINES:**
-• Use precise technical terminology with definitions where appropriate
-• Include mathematical formulations where they enhance understanding
-• Provide detailed explanations of quantum phenomena
-• Reference current research and developments (cite recent papers)
-• Maintain academic standards throughout
-• Balance depth with accessibility for advanced readers
+</task>
 
-**FORMATTING REQUIREMENTS:**
-• Use clear headings and subheadings
-• Include bullet points for key information
-• Provide numbered lists for steps or processes
-• Use bold text for important concepts
-• Structure content in logical sections
-• Include equations and formulas where relevant
+<constraints>
+• Word count: 3000-5000 words (comprehensive coverage required)
+• Academic tone: Formal, precise, citation-worthy
+• Mathematical rigor: Include equations and formal definitions
+• Citation requirements: Reference at least 10 recent peer-reviewed sources (2018-2024)
+• Technical depth: Suitable for graduate-level readers
+• Balance: Cover both theoretical foundations and practical implementations
+• Structure: Must follow logical progression from basics to advanced topics
 
-**SELF-REFLECTION CRITERIA:**
-Before finalizing your response, evaluate it against these criteria:
-• Does the prompt clearly define the role as a quantum physics expert?
-• Are all requirements specific and academically rigorous?
-• Is the output structure comprehensive and logically organized?
-• Will this prompt guide the AI to produce a thorough, well-researched explanation?
-• Is the academic tone properly incorporated with appropriate technical depth?
+</constraints>
 
-**SUCCESS CRITERIA:**
-Your response should be:
-• Academically rigorous and comprehensive
-• Technically accurate and detailed
-• Well-researched with proper citations
-• Suitable for advanced academic audience
-• Thoroughly structured with logical progression
-• Demonstrates deep understanding of quantum computing principles
+<reasoning>
+1. Establish historical and theoretical foundations: Begin with quantum mechanics principles (superposition, entanglement, measurement) and their computational significance
+2. Build mathematical framework: Introduce necessary linear algebra (Hilbert spaces, unitary operators, tensor products) and quantum gates
+3. Explain quantum phenomena: Detail how superposition enables parallel computation, entanglement enables quantum correlations, and interference enables amplitude amplification
+4. Present quantum algorithms: Systematically cover Shor's algorithm (factoring), Grover's algorithm (search), and variational algorithms (QAOA, VQE)
+5. Analyze computational advantages: Compare quantum vs. classical complexity for specific problem classes
+6. Address current implementations: Discuss superconducting qubits, trapped ions, photonic systems, and their respective challenges
+7. Examine error correction: Explain quantum error correction codes, fault tolerance thresholds, and current error rates
+8. Evaluate practical applications: Assess near-term use cases (quantum chemistry, optimization) vs. long-term potential (cryptography, machine learning)
+9. Synthesize future directions: Integrate current research trends, remaining challenges, and potential breakthroughs
+
+</reasoning>
+
+<examples>
+Example Mathematical Formulation:
+A quantum state |ψ⟩ in a 2-qubit system can be written as:
+|ψ⟩ = α₀₀|00⟩ + α₀₁|01⟩ + α₁₀|10⟩ + α₁₁|11⟩
+where |α₀₀|² + |α₀₁|² + |α₁₀|² + |α₁₁|² = 1 (normalization condition)
+
+Example Algorithm Explanation:
+Shor's algorithm demonstrates exponential speedup for integer factorization. While classical algorithms require O(exp(n^(1/3))) operations for an n-bit number, Shor's algorithm requires O(n³) quantum operations, representing a polynomial-time solution to a classically hard problem.
+
+</examples>
+
+<output_format>
+• Abstract/Introduction (300-400 words): Historical context, significance, and scope
+• Section 1: Theoretical Foundations (800-1000 words)
+  - Quantum mechanics basics (superposition, entanglement, measurement)
+  - Mathematical framework (Hilbert spaces, quantum gates, circuits)
+• Section 2: Quantum Phenomena and Computation (600-800 words)
+  - Superposition and parallel computation
+  - Entanglement and quantum correlations
+  - Interference and amplitude amplification
+• Section 3: Quantum Algorithms (1000-1200 words)
+  - Shor's algorithm (detailed walkthrough)
+  - Grover's algorithm (detailed walkthrough)
+  - Variational algorithms (QAOA, VQE)
+  - Complexity analysis and advantages
+• Section 4: Current Implementations (600-800 words)
+  - Hardware platforms (superconducting, trapped ions, photonic)
+  - Current capabilities and limitations
+  - NISQ era challenges
+• Section 5: Error Correction and Fault Tolerance (500-600 words)
+  - Quantum error correction codes
+  - Fault tolerance thresholds
+  - Current error rates and challenges
+• Section 6: Applications and Future Directions (400-600 words)
+  - Near-term applications
+  - Long-term potential
+  - Research directions and open problems
+• Conclusion (200-300 words): Synthesis and outlook
+• Bibliography: At least 10 peer-reviewed references (2018-2024)
+• Formatting: Use LaTeX-style equations, numbered sections, figure captions where applicable
+
+</output_format>
+
+<success_criteria>
+Your explanation must:
+• Be 3000-5000 words with comprehensive coverage
+• Include at least 10 recent peer-reviewed citations
+• Contain mathematical formulations for key concepts
+• Progress logically from basics to advanced topics
+• Demonstrate deep understanding of quantum computing principles
+• Balance theoretical rigor with practical insights
+• Be suitable for graduate-level academic audience
+• Address both current state and future directions
+
+</success_criteria>
+
+<guidelines>
+• Use precise technical terminology with formal definitions
+• Include mathematical notation following standard quantum computing conventions
+• Reference recent research (2018-2024) to demonstrate current understanding
+• Provide detailed explanations of quantum phenomena with computational context
+• Use academic writing style: passive voice where appropriate, formal structure
+• Include equations in standard quantum notation (Dirac notation, quantum gates)
+• Balance depth with clarity: assume mathematical sophistication but explain quantum-specific concepts
+• Cite primary sources (original papers) and recent review articles
+• Use figures/equations to illustrate complex concepts
+• Maintain objective, scholarly tone throughout
+
+</guidelines>
 ```
 
-### Example 3: Coding Request with Chain-of-Thought
+### Example 3: Coding Request - Technical Enhancement
 
 ```
 === USER REQUEST ===
@@ -302,75 +536,168 @@ Your response should be:
 {"tone": "technical", "length": "medium"}
 
 === YOUR OUTPUT ===
-**ROLE & EXPERTISE:**
-You are a senior backend engineer specializing in RESTful API design, security best practices, and authentication systems.
+<role>
+You are a senior backend engineer with 8+ years of experience specializing in RESTful API design, security best practices, and authentication systems. You have architected authentication systems for high-traffic applications (1M+ users) and are certified in OWASP security practices. You have deep expertise in JWT, OAuth2, password hashing algorithms, and secure session management.
 
-**TASK OVERVIEW:**
-Design and implement a secure REST API endpoint for user authentication that handles login, token generation, and session management.
+</role>
 
-**REASONING PROCESS:**
-1. Analyze security requirements: password hashing, token generation, session management
-2. Design the API contract: request/response formats, status codes, error handling
-3. Plan the authentication flow: validate credentials, generate tokens, set expiration
-4. Consider security measures: rate limiting, input validation, SQL injection prevention
-5. Design error handling: appropriate HTTP status codes, clear error messages
-6. Plan testing approach: unit tests, integration tests, security tests
+<context>
+This authentication endpoint will be part of a production web application serving 100K+ users. The system must handle concurrent requests, protect against common security vulnerabilities (OWASP Top 10), and comply with GDPR requirements for user data. The API will be consumed by a React frontend and must support both web and mobile clients. The backend uses Node.js/Express with PostgreSQL database.
 
-**KEY REQUIREMENTS:**
-• Secure password handling (bcrypt/argon2 hashing)
-• JWT token generation with appropriate expiration
-• Proper HTTP status codes (200, 401, 400, 500)
-• Input validation and sanitization
-• Rate limiting to prevent brute force attacks
-• Clear error messages without exposing sensitive information
+</context>
 
-**OUTPUT STRUCTURE:**
-• API endpoint specification (method, path, headers)
-• Request body schema with validation rules
-• Response formats for success and error cases
-• Security considerations and best practices
-• Implementation code with comments
-• Testing examples
+<task>
+Design and implement a secure, production-ready REST API endpoint for user authentication that handles user login, JWT token generation, token refresh, and secure session management. The implementation must include comprehensive security measures, proper error handling, input validation, rate limiting, and complete API documentation with request/response examples.
 
-**SPECIFIC GUIDELINES:**
-• Use industry-standard authentication patterns (JWT, OAuth2)
-• Follow RESTful conventions for endpoint design
-• Include security best practices (HTTPS, secure cookies)
-• Provide clear code examples with error handling
-• Document edge cases and potential issues
+</task>
 
-**FORMATTING REQUIREMENTS:**
-• Use clear headings and subheadings
-• Include code blocks with syntax highlighting
-• Provide request/response examples
-• Use bullet points for key information
-• Structure content in logical sections
+<constraints>
+• Password hashing: Use bcrypt with cost factor 12 or Argon2id
+• JWT expiration: Access token 15 minutes, refresh token 7 days
+• Rate limiting: 5 login attempts per IP per 15 minutes
+• Input validation: Validate email format, password strength (min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char)
+• HTTP status codes: 200 (success), 400 (bad request), 401 (unauthorized), 429 (rate limited), 500 (server error)
+• Security headers: Include CORS, X-Content-Type-Options, X-Frame-Options
+• Database: Use parameterized queries to prevent SQL injection
+• Error messages: Generic messages for security (don't reveal if email exists)
+• HTTPS only: All endpoints must use TLS 1.3
 
-**SELF-REFLECTION CRITERIA:**
-Before finalizing your response, evaluate it against these criteria:
-• Does the prompt clearly define the role as a backend security expert?
-• Are security requirements comprehensive and specific?
-• Is the reasoning process detailed enough to guide implementation?
-• Will this prompt guide the AI to produce secure, production-ready code?
-• Are technical best practices properly incorporated?
+</constraints>
 
-**SUCCESS CRITERIA:**
-Your response should be:
-• Secure and follows authentication best practices
-• Well-structured with clear API contract
-• Includes proper error handling
-• Production-ready code quality
-• Comprehensive documentation
+<reasoning>
+1. Analyze security requirements: Identify authentication threats (brute force, credential stuffing, token theft) and mitigation strategies
+2. Design API contract: Define endpoint (POST /api/auth/login), request schema (email, password), response schema (access_token, refresh_token, user data)
+3. Plan authentication flow: Validate credentials → verify password hash → generate JWT pair → set secure cookies → return tokens
+4. Implement security layers: Rate limiting middleware → input validation → password verification → token generation → secure response
+5. Design error handling: Map errors to appropriate HTTP status codes, provide generic error messages, log security events
+6. Plan token management: Access token in response body, refresh token in httpOnly cookie, implement refresh endpoint
+7. Design testing strategy: Unit tests for password hashing, integration tests for auth flow, security tests for rate limiting and input validation
+
+</reasoning>
+
+<examples>
+Example Request:
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "SecurePass123!"
+}
+
+Example Success Response (200):
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "user": {
+    "id": "123",
+    "email": "user@example.com",
+    "name": "John Doe"
+  }
+}
+
+Example Error Response (401):
+{
+  "error": "Invalid credentials",
+  "message": "The email or password you entered is incorrect"
+}
+
+Example Rate Limit Response (429):
+{
+  "error": "Too many requests",
+  "message": "Please try again in 15 minutes",
+  "retry_after": 900
+}
+
+</examples>
+
+<output_format>
+• API Specification Section:
+  - Endpoint: Method, path, headers required
+  - Request body schema with validation rules
+  - Response schemas for success and all error cases
+  - HTTP status codes and their meanings
+• Implementation Section:
+  - Complete code with comments
+  - Security middleware setup
+  - Error handling implementation
+  - Database query examples
+• Security Section:
+  - Security measures implemented
+  - OWASP compliance notes
+  - Threat mitigation strategies
+• Testing Section:
+  - Unit test examples
+  - Integration test examples
+  - Security test scenarios
+• Documentation Section:
+  - cURL examples
+  - Postman collection notes
+  - Error code reference
+
+</output_format>
+
+<success_criteria>
+Your implementation must:
+• Pass OWASP security checklist for authentication
+• Handle all error cases with appropriate status codes
+• Include rate limiting that prevents brute force attacks
+• Use secure password hashing (bcrypt cost 12+ or Argon2id)
+• Generate JWTs with proper expiration and refresh mechanism
+• Include comprehensive input validation
+• Be production-ready with proper error handling
+• Include complete API documentation
+
+</success_criteria>
+
+<guidelines>
+• Use industry-standard libraries: jsonwebtoken for JWT, bcrypt for hashing, express-rate-limit for rate limiting
+• Follow RESTful conventions: POST for login, clear resource naming
+• Implement defense in depth: Multiple security layers (rate limiting, validation, hashing, token security)
+• Use secure defaults: Short access token lifetime, httpOnly cookies for refresh tokens
+• Provide clear code comments explaining security decisions
+• Include error logging for security events (failed login attempts)
+• Document all edge cases: Invalid email format, weak password, expired tokens, rate limiting
+• Use TypeScript or JSDoc for type safety
+• Follow Node.js best practices: Async/await, proper error handling, middleware organization
+
+</guidelines>
 ```
 
-## FINAL REMINDERS
+## FINAL REMINDERS - CRITICAL REQUIREMENTS
 
-- Always create a structured prompt with clear sections, bullet points, and formatting
-- Never provide the actual answer or analysis - only the prompt structure
-- Include a REASONING PROCESS section to demonstrate Chain-of-Thought
-- Apply self-reflection criteria before finalizing
-- Use metaprompting to refine and improve your output
-- Incorporate context (tone, length) appropriately throughout`;
+ENHANCEMENT REQUIREMENTS (MUST FOLLOW):
+- Your output MUST be 3-5x more detailed than the user's input
+- You MUST ADD structure, constraints, examples, context, and formatting that the input lacks
+- You MUST NOT simply copy or restate the user's request
+- You MUST transform vague requests into specific, actionable prompts
+- You MUST include few-shot learning examples when appropriate
+- You MUST use structured formatting (XML-like tags or clear delimiters with ### or """)
+- You MUST incorporate metaprompting (self-reflection and refinement) before finalizing
+
+STRUCTURE REQUIREMENTS:
+- Always use XML-like tags (<role>, <context>, <task>, etc.) OR clear section headers with delimiters
+- Include ALL required sections: role, context, task, constraints, reasoning, examples, output_format, success_criteria, guidelines
+- Use delimiters (### or """) to separate instructions from context when needed
+- Never provide the actual answer or analysis - only create the prompt structure
+
+QUALITY REQUIREMENTS:
+- Include a detailed REASONING PROCESS section demonstrating Chain-of-Thought
+- Add few-shot learning examples showing desired output patterns
+- Apply metaprompting: self-assess, identify improvements, refine, and validate
+- Incorporate context (tone, length) throughout ALL sections, not just one
+- Ensure all requirements are specific, measurable, and actionable
+
+VALIDATION CHECKLIST:
+Before finalizing, verify:
+✓ Output is 3-5x longer than input
+✓ All required sections are present and detailed
+✓ Examples are included (few-shot learning)
+✓ Constraints are specific and added (not just copied)
+✓ Context/background information is added
+✓ Structured formatting is used (XML tags or delimiters)
+✓ Metaprompting has been applied`;
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -428,36 +755,84 @@ export default async function handler(req, res) {
         console.log(`Determined reasoning effort: ${reasoningEffort} for prompt length: ${prompt.length}`);
         
         // Use OpenAI API with optimized configuration
-        // Structure user message with clear delimiters and CoT instructions
-        let userMessage = `=== USER REQUEST ===
-\`\`\`
+        // Structure user message with clear delimiters (###) per OpenAI best practices
+        let userMessage = `### USER REQUEST ###
+"""
 ${prompt}
-\`\`\`
+"""
 
-=== INSTRUCTIONS ===
-Transform this user request into a professional, structured prompt for an AI system. 
+### CRITICAL INSTRUCTIONS ###
+You must TRANSFORM and ENHANCE this user request into a comprehensive, structured prompt for an AI system.
 
-CRITICAL: DO NOT answer the question or provide information. Create a prompt that someone would use to get an AI to answer it.
+IMPORTANT: 
+- DO NOT simply copy or restate the user's request
+- DO NOT answer the question or provide information
+- You MUST create a detailed, enhanced prompt that is 3-5x more detailed than the input
+- You MUST add structure, constraints, examples, context, and formatting that the input lacks
 
-Follow the Chain-of-Thought reasoning process:
-1. Analyze the user request to identify intent, domain, and complexity
-2. Determine the most appropriate expert role
-3. Extract key requirements and structure them logically
-4. Plan the output structure and sections needed
-5. Apply any context preferences (tone, length, etc.)
-6. Validate completeness and self-reflect on the prompt quality
-7. Refine if improvements are identified (metaprompting)`;
+### TRANSFORMATION REQUIREMENTS ###
+Your enhanced prompt MUST include:
+1. **Role & Expertise**: Specific expert persona with qualifications (ADD details not in input)
+2. **Context & Background**: Relevant context information (ADD this if missing from input)
+3. **Task Definition**: Clear, detailed task description (EXPAND beyond the input)
+4. **Constraints**: Specific constraints and requirements (ADD constraints not mentioned)
+5. **Reasoning Process**: Step-by-step Chain-of-Thought approach (ADD detailed reasoning steps)
+6. **Few-Shot Examples**: Example outputs or patterns (ADD examples to guide the AI)
+7. **Output Format**: Detailed format specifications (ADD structure and formatting requirements)
+8. **Success Criteria**: Measurable success criteria (ADD specific, actionable criteria)
+9. **Guidelines**: Specific execution guidelines (ADD detailed guidelines)
+
+### ENHANCEMENT PROCESS ###
+Follow this step-by-step process:
+1. Analyze what's MISSING from the user's request (context, constraints, examples, structure)
+2. Determine the appropriate expert role with specific qualifications
+3. ADD relevant background context that wasn't in the original request
+4. EXPAND the task definition with specific details and requirements
+5. ADD constraints, limitations, and requirements not mentioned
+6. CREATE a detailed reasoning process with specific steps
+7. GENERATE 1-3 few-shot learning examples showing desired output patterns
+8. SPECIFY detailed output format with structure, sections, and formatting
+9. DEFINE measurable success criteria
+10. ADD specific execution guidelines
+11. Use metaprompting: Review your output, identify improvements, and refine it
+12. Validate: Ensure output is 3-5x more detailed than input
+
+### FORMATTING REQUIREMENTS ###
+Use structured formatting with XML-like tags:
+- <role>...</role>
+- <context>...</context>
+- <task>...</task>
+- <constraints>...</constraints>
+- <reasoning>...</reasoning>
+- <examples>...</examples>
+- <output_format>...</output_format>
+- <success_criteria>...</success_criteria>
+- <guidelines>...</guidelines>
+
+OR use clear section headers with delimiters (### or """)`;
         
         if (context && Object.keys(context).length > 0) {
-          userMessage += `\n\n=== CONTEXT ===
-\`\`\`json
+          userMessage += `\n\n### CONTEXT PREFERENCES ###
+"""
 ${JSON.stringify(context, null, 2)}
-\`\`\`
+"""
 
-Incorporate the context preferences (tone, length, etc.) throughout the prompt structure.`;
+Incorporate these context preferences (tone, length, etc.) throughout ALL sections of your enhanced prompt:
+- Apply tone preferences in role, guidelines, and examples
+- Apply length preferences in constraints, output format, and success criteria
+- Integrate context naturally into background information and task definition`;
         }
 
-        userMessage += `\n\nRemember to include a REASONING PROCESS section in your output that demonstrates Chain-of-Thought, and apply self-reflection criteria before finalizing.`;
+        userMessage += `\n\n### METAPROMPTING STEP ###
+Before finalizing your output, perform self-reflection:
+1. Is this output 3-5x more detailed than the input?
+2. Did I ADD structure, constraints, examples, and context that weren't in the original?
+3. Are all required sections present and detailed?
+4. Are few-shot examples included?
+5. Is the formatting structured (XML tags or clear delimiters)?
+6. Can I improve any section for clarity or completeness?
+
+Refine your output based on this self-assessment.`;
 
         console.log('Attempting OpenAI API call with model: gpt-5.1');
         let completion;
@@ -488,58 +863,89 @@ Incorporate the context preferences (tone, length, etc.) throughout the prompt s
         result = completion.choices[0].message.content;
         console.log('OpenAI API call successful');
         
-        // Validate that the output is actually a structured prompt
-        if (!result.trim().toLowerCase().includes('**role & expertise:**')) {
-          console.log('Result not properly structured, retrying with stronger instructions');
-          const retryMessage = `=== RETRY REQUEST ===
-The previous response was not properly structured. Please create a structured prompt that follows this exact format:
+        // Comprehensive validation: Check if output is properly enhanced and structured
+        const validationResult = validateEnhancedOutput(result, prompt);
+        
+        if (!validationResult.isValid) {
+          console.log('Result validation failed:', validationResult.reasons);
+          console.log('Retrying with stronger instructions');
+          const retryMessage = `### RETRY REQUEST - ENHANCEMENT REQUIRED ###
 
-**ROLE & EXPERTISE:**
-You are [specific expert role] with [relevant expertise].
+The previous response did not meet the enhancement requirements. Validation issues found:
+${validationResult.reasons.map(r => `- ${r}`).join('\n')}
 
-**TASK OVERVIEW:**
-[Clear description of what needs to be accomplished]
+### CRITICAL: YOU MUST ENHANCE, NOT COPY ###
 
-**REASONING PROCESS:**
-[Step-by-step approach the AI should take]
+Your output MUST be 3-5x more detailed than the input. You MUST add:
+- Context and background information
+- Specific constraints and requirements
+- Few-shot learning examples (1-3 examples)
+- Detailed reasoning process
+- Comprehensive output format specifications
+- Measurable success criteria
+- Specific execution guidelines
 
-**KEY REQUIREMENTS:**
-• [Requirement 1]
-• [Requirement 2]
+### REQUIRED STRUCTURE (Use XML-like tags) ###
 
-**OUTPUT STRUCTURE:**
-• [Section 1]
-• [Section 2]
+<role>
+[Specific expert role with qualifications and experience - ADD details not in input]
+</role>
 
-**SPECIFIC GUIDELINES:**
-• [Guideline 1]
-• [Guideline 2]
+<context>
+[Relevant background information and context - ADD this if missing]
+</context>
 
-**FORMATTING REQUIREMENTS:**
-• Use clear headings and subheadings
-• Include bullet points for key information
-• Provide numbered lists for steps or processes
-• Use bold text for important concepts
-• Structure content in logical sections
+<task>
+[Clear, detailed task description - EXPAND beyond the input]
+</task>
 
-**SELF-REFLECTION CRITERIA:**
-Before finalizing your response, evaluate it against these criteria:
-• Does the prompt clearly define the role and expertise needed?
-• Are all requirements specific and actionable?
-• Is the output structure logical and complete?
-• Will this prompt guide the AI to produce the desired result?
+<constraints>
+• [Constraint 1 - ADD constraints not mentioned in input]
+• [Constraint 2 - ADD constraints not mentioned in input]
+• [Additional constraints]
+</constraints>
 
-**SUCCESS CRITERIA:**
-Your response should be:
-• [Criterion 1]
-• [Criterion 2]
+<reasoning>
+[Step-by-step Chain-of-Thought approach - ADD detailed reasoning steps]
+</reasoning>
 
-=== ORIGINAL REQUEST ===
-\`\`\`
+<examples>
+Example 1:
+[Example output or pattern - ADD this]
+
+Example 2:
+[Example output or pattern - ADD this if appropriate]
+</examples>
+
+<output_format>
+• [Section 1: Specific structure requirements - ADD details]
+• [Section 2: Specific structure requirements - ADD details]
+• [Formatting specifications - ADD this]
+</output_format>
+
+<success_criteria>
+Your response must meet these criteria:
+• [Criterion 1: Measurable and specific - ADD this]
+• [Criterion 2: Measurable and specific - ADD this]
+</success_criteria>
+
+<guidelines>
+• [Guideline 1: Specific execution instruction - ADD this]
+• [Guideline 2: Specific execution instruction - ADD this]
+</guidelines>
+
+### ORIGINAL USER REQUEST ###
+"""
 ${prompt}
-\`\`\`
+"""
 
-DO NOT provide the answer to the question - create a structured prompt that someone would use to get an AI to answer it.`;
+### REMINDER ###
+- Your output MUST be 3-5x longer than the input above
+- DO NOT simply restate the user's request
+- ADD structure, constraints, examples, context, and formatting
+- Use XML-like tags or clear delimiters for structure
+- Include few-shot learning examples
+- Apply metaprompting: review, refine, and validate your output`;
           
           const retryConfig = {
             model: 'gpt-5.1',
