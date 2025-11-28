@@ -1019,24 +1019,54 @@ Refine your output based on this self-assessment.`;
           console.log('API call successful, response received');
         } catch (modelError) {
           console.log('gpt-5.1 failed, trying gpt-5.0 as fallback. Error:', modelError.message);
-          // Remove reasoning_effort for fallback model if it doesn't support it
+          // Try gpt-5.0 first
           const fallbackConfig = {
             ...apiConfig,
             model: 'gpt-5.0'
           };
-          // gpt-5.0 may not support reasoning_effort, so we'll try without it if needed
+          
           try {
             completion = await openaiInstance.chat.completions.create(fallbackConfig);
+            console.log('gpt-5.0 fallback successful');
           } catch (fallbackError) {
             // If gpt-5.0 also fails with reasoning_effort, try without it
             console.log('gpt-5.0 with reasoning_effort failed, trying without reasoning_effort. Error:', fallbackError.message);
             delete fallbackConfig.reasoning_effort;
+            
             try {
               completion = await openaiInstance.chat.completions.create(fallbackConfig);
-            } catch (finalError) {
-              // If all fallbacks fail, throw the original error
-              console.error('All model fallbacks failed. Original error:', modelError.message);
-              throw modelError;
+              console.log('gpt-5.0 fallback (without reasoning_effort) successful');
+            } catch (gpt5Error) {
+              // Fallback to gpt-4o (doesn't support reasoning_effort)
+              console.log('gpt-5.0 failed, trying gpt-4o as fallback. Error:', gpt5Error.message);
+              const gpt4Config = {
+                model: 'gpt-4o',
+                messages: apiConfig.messages,
+                max_tokens: apiConfig.max_tokens,
+                temperature: apiConfig.temperature
+                // Note: gpt-4o doesn't support reasoning_effort, so we don't include it
+              };
+              
+              try {
+                completion = await openaiInstance.chat.completions.create(gpt4Config);
+                console.log('gpt-4o fallback successful');
+              } catch (gpt4Error) {
+                // Try gpt-4-turbo as final fallback
+                console.log('gpt-4o failed, trying gpt-4-turbo as final fallback. Error:', gpt4Error.message);
+                const gpt4TurboConfig = {
+                  ...gpt4Config,
+                  model: 'gpt-4-turbo'
+                };
+                
+                try {
+                  completion = await openaiInstance.chat.completions.create(gpt4TurboConfig);
+                  console.log('gpt-4-turbo fallback successful');
+                } catch (finalError) {
+                  // If all fallbacks fail, throw the original error
+                  console.error('All model fallbacks failed. Original error:', modelError.message);
+                  throw modelError;
+                }
+              }
             }
           }
         }
@@ -1189,6 +1219,7 @@ ${prompt}
             // Fallback to gpt-5.0 if retry also fails
             console.log('Retry with gpt-5.1 failed, trying gpt-5.0 as fallback. Error:', retryError.message);
             retryConfig.model = 'gpt-5.0';
+            
             try {
               const retryCompletion = await openaiInstance.chat.completions.create(retryConfig);
               result = retryCompletion.choices[0].message.content;
@@ -1197,14 +1228,41 @@ ${prompt}
               // If gpt-5.0 also fails with reasoning_effort, try without it
               console.log('Retry with gpt-5.0 and reasoning_effort failed, trying without reasoning_effort. Error:', retryError2.message);
               delete retryConfig.reasoning_effort;
+              
               try {
                 const retryCompletion = await openaiInstance.chat.completions.create(retryConfig);
                 result = retryCompletion.choices[0].message.content;
                 console.log('Retry OpenAI API call successful (gpt-5.0 fallback)');
-              } catch (finalRetryError) {
-                // If all retry fallbacks fail, throw the original retry error
-                console.error('All retry fallbacks failed. Original retry error:', retryError.message);
-                throw retryError;
+              } catch (gpt5RetryError) {
+                // Fallback to gpt-4o for retry
+                console.log('Retry with gpt-5.0 failed, trying gpt-4o as fallback. Error:', gpt5RetryError.message);
+                const gpt4RetryConfig = {
+                  model: 'gpt-4o',
+                  messages: retryConfig.messages,
+                  max_tokens: retryConfig.max_tokens,
+                  temperature: retryConfig.temperature
+                  // Note: gpt-4o doesn't support reasoning_effort
+                };
+                
+                try {
+                  const retryCompletion = await openaiInstance.chat.completions.create(gpt4RetryConfig);
+                  result = retryCompletion.choices[0].message.content;
+                  console.log('Retry OpenAI API call successful (gpt-4o fallback)');
+                } catch (gpt4RetryError) {
+                  // Try gpt-4-turbo as final retry fallback
+                  console.log('Retry with gpt-4o failed, trying gpt-4-turbo as final fallback. Error:', gpt4RetryError.message);
+                  gpt4RetryConfig.model = 'gpt-4-turbo';
+                  
+                  try {
+                    const retryCompletion = await openaiInstance.chat.completions.create(gpt4RetryConfig);
+                    result = retryCompletion.choices[0].message.content;
+                    console.log('Retry OpenAI API call successful (gpt-4-turbo fallback)');
+                  } catch (finalRetryError) {
+                    // If all retry fallbacks fail, throw the original retry error
+                    console.error('All retry fallbacks failed. Original retry error:', retryError.message);
+                    throw retryError;
+                  }
+                }
               }
             }
           }
