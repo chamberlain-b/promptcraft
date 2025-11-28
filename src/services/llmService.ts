@@ -75,14 +75,36 @@ class LLMService {
         };
       }
 
-      if (axiosError.response && axiosError.response.status === 500) {
+      if (axiosError.response && (axiosError.response.status === 500 || axiosError.response.status === 503)) {
         const errorMessage = axiosError.response?.data?.error || 'Service temporarily unavailable';
         console.error('Server error details:', axiosError.response.data);
         return {
           output: null,
-          requestsLeft: null,
-          limit: null,
-          error: `Service temporarily unavailable. Please try again in a moment.`
+          requestsLeft: axiosError.response.data?.requestsLeft ?? null,
+          limit: axiosError.response.data?.limit ?? null,
+          error: errorMessage || 'Service temporarily unavailable. Please try again in a moment.'
+        };
+      }
+
+      if (axiosError.response && axiosError.response.status === 404) {
+        const errorMessage = axiosError.response?.data?.error || 'Model not found';
+        console.error('Model not found error:', axiosError.response.data);
+        return {
+          output: null,
+          requestsLeft: axiosError.response.data?.requestsLeft ?? null,
+          limit: axiosError.response.data?.limit ?? null,
+          error: errorMessage
+        };
+      }
+
+      if (axiosError.response && axiosError.response.status === 400) {
+        const errorMessage = axiosError.response?.data?.error || 'Invalid request';
+        console.error('Invalid request error:', axiosError.response.data);
+        return {
+          output: null,
+          requestsLeft: axiosError.response.data?.requestsLeft ?? null,
+          limit: axiosError.response.data?.limit ?? null,
+          error: errorMessage
         };
       }
 

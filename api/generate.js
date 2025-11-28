@@ -872,8 +872,14 @@ export default async function handler(req, res) {
     // Use environment API key only
     const effectiveApiKey = process.env.OPENAI_API_KEY;
     console.log('Effective API Key available:', effectiveApiKey ? 'Yes' : 'No');
+    console.log('API Key format check:', effectiveApiKey ? (effectiveApiKey.startsWith('sk-') ? 'Valid format (starts with sk-)' : 'Warning: API key does not start with sk-') : 'No key');
     
     if (effectiveApiKey) {
+      // Validate API key format
+      if (!effectiveApiKey.startsWith('sk-')) {
+        console.warn('API key format warning: Expected key to start with "sk-"');
+      }
+      
       // Initialize OpenAI with the available API key
       const openaiInstance = new OpenAI({ apiKey: effectiveApiKey });
       useOpenAI = true;
@@ -986,6 +992,15 @@ Before finalizing your output, perform self-reflection:
 Refine your output based on this self-assessment.`;
 
         console.log('Attempting OpenAI API call with model: gpt-5.1');
+        console.log('API Config:', {
+          model: 'gpt-5.1',
+          reasoning_effort: reasoningEffort,
+          max_tokens: 2500,
+          temperature: 0.55,
+          system_message_length: ENHANCED_PROMPT_SYSTEM.length,
+          user_message_length: userMessage.length
+        });
+        
         let completion;
         const apiConfig = {
           model: 'gpt-5.1',
@@ -999,7 +1014,9 @@ Refine your output based on this self-assessment.`;
         };
         
         try {
+          console.log('Making API call to OpenAI...');
           completion = await openaiInstance.chat.completions.create(apiConfig);
+          console.log('API call successful, response received');
         } catch (modelError) {
           console.log('gpt-5.1 failed, trying gpt-5.0 as fallback. Error:', modelError.message);
           // Remove reasoning_effort for fallback model if it doesn't support it
@@ -1193,18 +1210,51 @@ ${prompt}
           }
         }
       } catch (openaiError) {
-        console.error('OpenAI API Error Details:', {
+        // Extract detailed error information
+        const errorDetails = {
           message: openaiError.message,
           status: openaiError.status,
           code: openaiError.code,
           type: openaiError.type,
-          response: openaiError.response?.data
-        });
+          response: openaiError.response?.data,
+          statusText: openaiError.response?.statusText
+        };
         
-        // Provide more detailed error message
-        const errorMessage = openaiError.message || 'Unknown error';
-        const errorStatus = openaiError.status || 'Unknown';
-        throw new Error(`AI enhancement service error (${errorStatus}): ${errorMessage}`);
+        console.error('OpenAI API Error Details:', errorDetails);
+        
+        // Check for specific error types
+        let errorMessage = openaiError.message || 'Unknown error';
+        let errorStatus = openaiError.status || 500;
+        
+        // Handle model not found errors
+        if (errorDetails.code === 'model_not_found' || 
+            errorDetails.message?.includes('model_not_found') ||
+            errorDetails.message?.includes('does not exist') ||
+            errorDetails.message?.includes('not found')) {
+          errorMessage = `Model gpt-5.1/gpt-5.0 is not available. Please check your OpenAI account has access to these models. Original error: ${errorMessage}`;
+          errorStatus = 404;
+        }
+        // Handle authentication errors
+        else if (errorDetails.status === 401 || errorDetails.code === 'invalid_api_key') {
+          errorMessage = 'Invalid API key. Please check your OPENAI_API_KEY environment variable.';
+          errorStatus = 401;
+        }
+        // Handle rate limit errors
+        else if (errorDetails.status === 429 || errorDetails.code === 'rate_limit_exceeded') {
+          errorMessage = 'Rate limit exceeded. Please try again later.';
+          errorStatus = 429;
+        }
+        // Handle invalid request errors
+        else if (errorDetails.status === 400 || errorDetails.code === 'invalid_request_error') {
+          errorMessage = `Invalid request: ${errorMessage}. This might indicate an issue with the API parameters.`;
+          errorStatus = 400;
+        }
+        
+        // Create error object with details
+        const enhancedError = new Error(errorMessage);
+        enhancedError.status = errorStatus;
+        enhancedError.details = errorDetails;
+        throw enhancedError;
       }
     } else {
       // No API key available, return error instead of local fallback
@@ -1225,16 +1275,32 @@ ${prompt}
     });
   } catch (err) {
     console.error('Error in /api/generate:', err.stack || err);
+    console.error('Error details:', {
+      message: err.message,
+      status: err.status,
+      code: err.code,
+      details: err.details
+    });
 
     // Get current usage stats for error response
     const stats = getUsageStats(req);
 
-    // Return error instead of local fallback
-    res.status(503).json({
-      error: 'AI enhancement service is temporarily unavailable. Please try again in a few moments.',
+    // Determine appropriate status code
+    const statusCode = err.status || 503;
+    
+    // Return detailed error information for debugging
+    const errorResponse = {
+      error: err.message || 'AI enhancement service is temporarily unavailable. Please try again in a few moments.',
       requestsLeft: stats.remaining,
       limit: stats.limit,
       enhanced: false
-    });
+    };
+
+    // Include error details in development mode
+    if (process.env.NODE_ENV !== 'production' && err.details) {
+      errorResponse.errorDetails = err.details;
+    }
+
+    res.status(statusCode).json(errorResponse);
   }
 }
