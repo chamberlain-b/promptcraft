@@ -2,6 +2,119 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --color-background: #0f172a;
+    --color-surface: rgba(17, 24, 39, 0.8);
+    --color-surface-strong: rgba(15, 23, 42, 0.9);
+    --color-panel: rgba(31, 41, 55, 0.5);
+    --color-panel-strong: rgba(55, 65, 81, 0.6);
+    --border-soft: rgba(55, 65, 81, 0.5);
+    --border-strong: rgba(75, 85, 99, 0.6);
+    --blur-surface: 18px;
+    --radius-card: 1.5rem;
+    --radius-panel: 1rem;
+    --card-min-height: 50rem;
+  }
+
+  body {
+    background-color: var(--color-background);
+  }
+
+  * {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@layer components {
+  .surface-card {
+    background-color: var(--color-surface);
+    backdrop-filter: blur(var(--blur-surface));
+    border-radius: var(--radius-card);
+    border: 1px solid var(--border-soft);
+    transition: all 0.3s ease;
+  }
+
+  .surface-card:hover {
+    border-color: rgba(75, 85, 99, 0.7);
+  }
+
+  .surface-panel {
+    background-color: var(--color-panel);
+    border-radius: var(--radius-panel);
+    border: 1px solid var(--border-strong);
+    transition: all 0.2s ease;
+  }
+
+  .surface-panel--strong {
+    background-color: var(--color-surface-strong);
+    border-radius: var(--radius-panel);
+    border: 1px solid var(--border-strong);
+  }
+
+  .chip-soft {
+    background-color: rgba(45, 55, 72, 0.35);
+    border-radius: 9999px;
+    padding: 0.25rem 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: all 0.2s ease;
+  }
+
+  .chip-soft:hover {
+    background-color: rgba(45, 55, 72, 0.5);
+  }
+
+  /* Button styles with enhanced states */
+  button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
+  }
+
+  button:focus-visible {
+    outline: 2px solid rgba(45, 212, 191, 0.5);
+    outline-offset: 2px;
+  }
+
+  button:active {
+    transform: scale(0.98);
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* Gradient button enhancement */
+  button.bg-gradient-to-r {
+    background-size: 200% 100%;
+    transition: background-position 0.3s ease, transform 0.2s ease;
+  }
+
+  button.bg-gradient-to-r:hover:not(:disabled) {
+    background-position: 100% 0;
+  }
+
+  button.bg-gradient-to-r:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  /* Input and textarea enhancements */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
+  }
+
+  /* Link hover effects */
+  a {
+    transition: color 0.2s ease;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -21,10 +134,95 @@
   background: rgba(99, 102, 241, 0.7);
 }
 
+/* Tailwind scrollbar utilities */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thumb-gray-600 {
+  scrollbar-color: rgba(75, 85, 99, 1) transparent;
+}
+
+.scrollbar-track-gray-800 {
+  scrollbar-color: rgba(75, 85, 99, 1) rgba(31, 41, 55, 1);
+}
+
 /* Line clamp utility */
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Custom scrollbar class for consistent styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(55, 65, 81, 0.3);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.6);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.8);
+}
+
+/* Text overflow and word wrapping fixes */
+.text-container {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.textarea-container {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  white-space: pre-wrap;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure containers don't overflow */
+.card-container {
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Fix for long words and URLs */
+.break-all {
+  word-break: break-all;
+}
+
+.break-words {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* Auto-expanding textarea */
+.auto-expand-textarea {
+  field-sizing: content;
+  min-height: 220px;
+  max-height: 600px;
+  transition: height 0.2s ease;
+  resize: none;
+}
+
+/* Fallback for browsers that don't support field-sizing */
+@supports not (field-sizing: content) {
+  .auto-expand-textarea {
+    overflow-y: auto;
+  }
 }
