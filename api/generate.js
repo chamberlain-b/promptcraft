@@ -69,9 +69,10 @@ function determineReasoningEffort(prompt, context = {}) {
  * Validates that the enhanced output meets all quality requirements
  * @param {string} output - The generated prompt output
  * @param {string} input - The original user input
+ * @param {object} context - Optional context with tone/length preferences
  * @returns {{isValid: boolean, reasons: string[]}} - Validation result
  */
-function validateEnhancedOutput(output, input) {
+function validateEnhancedOutput(output, input, context = {}) {
   const reasons = [];
   const outputLower = output.toLowerCase();
   const inputLength = input.trim().length;
@@ -83,19 +84,25 @@ function validateEnhancedOutput(output, input) {
     reasons.push(`Output length (${outputLength}) is less than 3x input length (${inputLength}). Expected at least ${minExpectedLength} characters.`);
   }
   
-  // Check 2: Must have role/expertise section (check for multiple formats)
+  // Check 2: Must have role/expertise section (check for multiple formats - XML or Markdown)
   const hasRole = outputLower.includes('<role>') || 
+                  outputLower.includes('</role>') ||
                   outputLower.includes('**role') || 
                   outputLower.includes('role & expertise') ||
-                  outputLower.includes('role:');
+                  outputLower.includes('role:') ||
+                  outputLower.includes('## role') ||
+                  outputLower.includes('# role');
   if (!hasRole) {
     reasons.push('Missing role/expertise section');
   }
   
   // Check 3: Must have context/background section
   const hasContext = outputLower.includes('<context>') || 
+                     outputLower.includes('</context>') ||
                      outputLower.includes('**context') ||
                      outputLower.includes('context & background') ||
+                     outputLower.includes('context:') ||
+                     outputLower.includes('## context') ||
                      outputLower.includes('background');
   if (!hasContext) {
     reasons.push('Missing context/background section');
@@ -103,67 +110,94 @@ function validateEnhancedOutput(output, input) {
   
   // Check 4: Must have task section
   const hasTask = outputLower.includes('<task>') || 
+                  outputLower.includes('</task>') ||
                   outputLower.includes('**task') ||
                   outputLower.includes('task overview') ||
-                  outputLower.includes('task:');
+                  outputLower.includes('task & objective') ||
+                  outputLower.includes('task:') ||
+                  outputLower.includes('## task');
   if (!hasTask) {
     reasons.push('Missing task section');
   }
   
   // Check 5: Must have constraints/requirements section
   const hasConstraints = outputLower.includes('<constraints>') || 
+                         outputLower.includes('</constraints>') ||
                          outputLower.includes('**constraints') ||
                          outputLower.includes('**requirements') ||
-                         outputLower.includes('constraints') ||
-                         outputLower.includes('requirements');
+                         outputLower.includes('constraints & requirements') ||
+                         outputLower.includes('constraints:') ||
+                         outputLower.includes('requirements:') ||
+                         outputLower.includes('## constraints') ||
+                         (outputLower.includes('constraints') && outputLower.includes('•'));
   if (!hasConstraints) {
     reasons.push('Missing constraints/requirements section');
   }
   
   // Check 6: Must have reasoning process section
   const hasReasoning = outputLower.includes('<reasoning>') || 
+                       outputLower.includes('</reasoning>') ||
                        outputLower.includes('**reasoning') ||
                        outputLower.includes('reasoning process') ||
-                       outputLower.includes('chain-of-thought');
+                       outputLower.includes('chain-of-thought') ||
+                       outputLower.includes('chain of thought') ||
+                       outputLower.includes('## reasoning');
   if (!hasReasoning) {
     reasons.push('Missing reasoning process section');
   }
   
-  // Check 7: Must have examples (few-shot learning)
+  // Check 7: Must have examples (few-shot learning) - more flexible check
   const hasExamples = outputLower.includes('<examples>') || 
+                      outputLower.includes('</examples>') ||
                       outputLower.includes('**examples') ||
+                      outputLower.includes('examples & few-shot') ||
+                      outputLower.includes('few-shot learning') ||
                       outputLower.includes('example 1') ||
-                      outputLower.includes('few-shot') ||
-                      (outputLower.includes('example') && (outputLower.includes('example 2') || outputLower.includes('example:')));
+                      outputLower.includes('example:') ||
+                      (outputLower.includes('example') && (outputLower.includes('example 2') || outputLower.includes('example 3') || outputLower.includes('pattern')));
   if (!hasExamples) {
     reasons.push('Missing examples/few-shot learning section');
   }
   
   // Check 8: Must have output format section
   const hasOutputFormat = outputLower.includes('<output_format>') || 
+                          outputLower.includes('</output_format>') ||
                           outputLower.includes('**output format') ||
+                          outputLower.includes('output format & structure') ||
                           outputLower.includes('output structure') ||
-                          outputLower.includes('format requirements');
+                          outputLower.includes('format requirements') ||
+                          outputLower.includes('## output format');
   if (!hasOutputFormat) {
     reasons.push('Missing output format/structure section');
   }
   
   // Check 9: Must have success criteria section
   const hasSuccessCriteria = outputLower.includes('<success_criteria>') || 
+                             outputLower.includes('</success_criteria>') ||
                              outputLower.includes('**success criteria') ||
-                             outputLower.includes('success criteria');
+                             outputLower.includes('success criteria') ||
+                             outputLower.includes('## success criteria');
   if (!hasSuccessCriteria) {
     reasons.push('Missing success criteria section');
   }
   
-  // Check 10: Must use structured formatting (XML tags or clear delimiters)
+  // Check 10: Must use structured formatting (XML tags OR Markdown headers) - more flexible
   const hasStructuredFormat = outputLower.includes('<role>') || 
+                              outputLower.includes('</role>') ||
                               outputLower.includes('<context>') ||
+                              outputLower.includes('</context>') ||
                               outputLower.includes('<task>') ||
+                              outputLower.includes('</task>') ||
+                              outputLower.includes('**role') ||
+                              outputLower.includes('**context') ||
+                              outputLower.includes('**task') ||
+                              outputLower.includes('## role') ||
+                              outputLower.includes('## context') ||
+                              outputLower.includes('## task') ||
                               outputLower.includes('###') ||
                               output.includes('"""');
   if (!hasStructuredFormat) {
-    reasons.push('Missing structured formatting (XML tags or delimiters)');
+    reasons.push('Missing structured formatting (XML tags or Markdown headers)');
   }
   
   // Check 11: Should not be just copying the input (check for substantial enhancement)
@@ -175,6 +209,34 @@ function validateEnhancedOutput(output, input) {
   const copyRatio = exactCopies.length / Math.max(inputWords.length, 1);
   if (copyRatio > 0.8 && outputLength < inputLength * 2) {
     reasons.push('Output appears to be mostly copying input without sufficient enhancement');
+  }
+  
+  // Check 12: If context has tone/length, verify they're being used
+  if (context && context.tone) {
+    const tone = context.tone.toLowerCase();
+    // Check if tone is mentioned or applied in the output
+    const toneMentioned = outputLower.includes(tone) || 
+                          (tone === 'professional' && (outputLower.includes('professional') || outputLower.includes('business'))) ||
+                          (tone === 'casual' && (outputLower.includes('casual') || outputLower.includes('conversational') || outputLower.includes('friendly'))) ||
+                          (tone === 'formal' && (outputLower.includes('formal') || outputLower.includes('formal'))) ||
+                          (tone === 'academic' && (outputLower.includes('academic') || outputLower.includes('scholarly') || outputLower.includes('research'))) ||
+                          (tone === 'technical' && (outputLower.includes('technical') || outputLower.includes('technical')));
+    if (!toneMentioned) {
+      reasons.push(`Tone preference (${context.tone}) is not being applied in the enhanced prompt`);
+    }
+  }
+  
+  if (context && context.length) {
+    const length = context.length.toLowerCase();
+    // Check if length is mentioned or applied (word counts, section counts, etc.)
+    const lengthMentioned = outputLower.includes(length) ||
+                           (length === 'short' && (outputLower.includes('200') || outputLower.includes('300') || outputLower.includes('500') || outputLower.includes('brief'))) ||
+                           (length === 'medium' && (outputLower.includes('500') || outputLower.includes('1000') || outputLower.includes('1500') || outputLower.includes('moderate'))) ||
+                           (length === 'long' && (outputLower.includes('1500') || outputLower.includes('2000') || outputLower.includes('3000') || outputLower.includes('detailed'))) ||
+                           (length === 'comprehensive' && (outputLower.includes('3000') || outputLower.includes('comprehensive') || outputLower.includes('thorough') || outputLower.includes('extensive')));
+    if (!lengthMentioned) {
+      reasons.push(`Length preference (${context.length}) is not being applied in the enhanced prompt`);
+    }
   }
   
   return {
@@ -210,9 +272,15 @@ Before generating the prompt, follow this step-by-step reasoning process:
 9. **Validate Enhancement**: Ensure the output is 3-5x more detailed than input
 10. **Self-Reflect and Refine**: Use metaprompting to evaluate and improve the prompt before finalizing
 
-## OUTPUT STRUCTURE (Using XML-like Tags or Clear Delimiters)
+## OUTPUT STRUCTURE (Flexible Format - XML Tags OR Markdown)
 
-Your output should be a WELL-STRUCTURED, ENHANCED prompt that uses structured formatting. You can use either XML-like tags or clear section headers with delimiters. Always include ALL of these sections:
+Your output should be a WELL-STRUCTURED, ENHANCED prompt. You can use EITHER:
+- **Option 1: XML-like tags** (preferred for structured parsing)
+- **Option 2: Markdown format** with clear section headers using **bold** or ## headings
+
+Always include ALL of these sections (use consistent format throughout):
+
+**FORMAT OPTION 1: XML-like Tags**
 
 <role>
 You are [specific expert role] with [relevant expertise, qualifications, and years of experience]. [Add specific background that makes this role credible]
@@ -277,12 +345,73 @@ Your response must meet these criteria:
 
 </guidelines>
 
-## CONTEXT HANDLING
+**OR FORMAT OPTION 2: Markdown with Clear Headers**
 
-IMPORTANT: When context includes tone and length preferences, incorporate them throughout ALL sections:
-- TONE: Adjust the language style and formality level (professional, casual, formal, friendly, academic, technical, creative) in the role, guidelines, and examples
-- LENGTH: Adjust the scope and detail level (short, medium, long, comprehensive) in constraints, output format, and success criteria
-- Add specific word counts, section counts, or detail levels based on length preference
+**ROLE & EXPERTISE:**
+You are [specific expert role] with [relevant expertise, qualifications, and years of experience]. [Add specific background that makes this role credible]
+
+**CONTEXT & BACKGROUND:**
+[Relevant background information, domain context, and situational details that weren't in the user's request but are necessary for the AI to understand the task]
+
+**TASK & OBJECTIVE:**
+[Clear, specific, and detailed description of what needs to be accomplished. This should be MORE detailed than the user's original request]
+
+**CONSTRAINTS & REQUIREMENTS:**
+• [Constraint 1: Specific limitation or requirement]
+• [Constraint 2: Specific limitation or requirement]
+• [Constraint 3: Specific limitation or requirement]
+• [Additional constraints as needed - these should be ADDED, not just copied from the user's request]
+
+**REASONING PROCESS:**
+[Step-by-step Chain-of-Thought approach the AI should take when answering. This should be detailed and specific, not generic]
+
+**EXAMPLES & FEW-SHOT LEARNING:**
+Example 1:
+[Example output or pattern]
+
+Example 2:
+[Example output or pattern]
+
+**OUTPUT FORMAT & STRUCTURE:**
+• [Section 1: Specific structure and content requirements]
+• [Section 2: Specific structure and content requirements]
+• [Section 3: Specific structure and content requirements]
+• [Formatting specifications: headings, lists, tables, code blocks, etc.]
+
+**SUCCESS CRITERIA:**
+Your response must meet these criteria:
+• [Criterion 1: Measurable and specific]
+• [Criterion 2: Measurable and specific]
+• [Criterion 3: Measurable and specific]
+
+**GUIDELINES & BEST PRACTICES:**
+• [Guideline 1: Specific execution instruction]
+• [Guideline 2: Specific execution instruction]
+• [Guideline 3: Specific execution instruction]
+• [Additional guidelines for tone, style, depth, etc.]
+
+## CONTEXT HANDLING - CRITICAL
+
+When context includes tone and length preferences, you MUST incorporate them throughout ALL sections of your enhanced prompt:
+
+**TONE PREFERENCES** (professional, casual, formal, friendly, academic, technical, creative):
+- Apply tone in the <role> section: Choose an expert persona that matches the tone
+- Apply tone in the <guidelines> section: Specify language style, formality, and communication approach
+- Apply tone in the <examples> section: Show examples that demonstrate the desired tone
+- Apply tone in the <task> section: Use language that matches the tone preference
+
+**LENGTH PREFERENCES** (short, medium, long, comprehensive):
+- SHORT: 200-500 words, 2-3 main sections, concise examples, minimal background
+- MEDIUM: 500-1500 words, 3-5 main sections, moderate examples, some background
+- LONG: 1500-3000 words, 5-7 main sections, detailed examples, comprehensive background
+- COMPREHENSIVE: 3000+ words, 7+ main sections, extensive examples, thorough background
+
+Apply length in:
+- <constraints> section: Specify exact word count or length range
+- <output_format> section: Define number of sections and detail level
+- <success_criteria> section: Include length requirements
+- <context> section: Adjust background detail based on length
+- <examples> section: Adjust example detail based on length
 
 ## METAPROMPTING (Self-Reflection and Refinement)
 
@@ -677,8 +806,9 @@ ENHANCEMENT REQUIREMENTS (MUST FOLLOW):
 - You MUST incorporate metaprompting (self-reflection and refinement) before finalizing
 
 STRUCTURE REQUIREMENTS:
-- Always use XML-like tags (<role>, <context>, <task>, etc.) OR clear section headers with delimiters
+- Use EITHER XML-like tags (<role>, <context>, <task>, etc.) OR Markdown format with **bold** headers or ## headings
 - Include ALL required sections: role, context, task, constraints, reasoning, examples, output_format, success_criteria, guidelines
+- Be consistent: Use the same format (XML or Markdown) throughout the entire prompt
 - Use delimiters (### or """) to separate instructions from context when needed
 - Never provide the actual answer or analysis - only create the prompt structure
 
@@ -812,15 +942,36 @@ Use structured formatting with XML-like tags:
 OR use clear section headers with delimiters (### or """)`;
         
         if (context && Object.keys(context).length > 0) {
-          userMessage += `\n\n### CONTEXT PREFERENCES ###
+          const tone = context.tone || 'professional';
+          const length = context.length || 'medium';
+          
+          userMessage += `\n\n### CRITICAL: USER PREFERENCES - MUST BE APPLIED ###
 """
+Tone: ${tone}
+Length: ${length}
 ${JSON.stringify(context, null, 2)}
 """
 
-Incorporate these context preferences (tone, length, etc.) throughout ALL sections of your enhanced prompt:
-- Apply tone preferences in role, guidelines, and examples
-- Apply length preferences in constraints, output format, and success criteria
-- Integrate context naturally into background information and task definition`;
+**YOU MUST INCORPORATE THESE PREFERENCES THROUGHOUT YOUR ENTIRE ENHANCED PROMPT:**
+
+**TONE PREFERENCE: ${tone.toUpperCase()}**
+- In <role> section: Choose an expert persona that embodies ${tone} tone
+- In <guidelines> section: Specify ${tone} language style, formality, and communication approach
+- In <examples> section: Show examples that clearly demonstrate ${tone} tone
+- In <task> section: Use language that matches ${tone} tone
+
+**LENGTH PREFERENCE: ${length.toUpperCase()}**
+${length === 'short' ? '- Target: 200-500 words, 2-3 main sections, concise examples, minimal background' : ''}
+${length === 'medium' ? '- Target: 500-1500 words, 3-5 main sections, moderate examples, some background' : ''}
+${length === 'long' ? '- Target: 1500-3000 words, 5-7 main sections, detailed examples, comprehensive background' : ''}
+${length === 'comprehensive' ? '- Target: 3000+ words, 7+ main sections, extensive examples, thorough background' : ''}
+- In <constraints> section: Specify exact word count or length range based on ${length}
+- In <output_format> section: Define number of sections and detail level for ${length}
+- In <success_criteria> section: Include ${length} length requirements
+- In <context> section: Adjust background detail to match ${length} preference
+- In <examples> section: Adjust example detail to match ${length} preference
+
+**DO NOT IGNORE THESE PREFERENCES - THEY ARE REQUIRED!**`;
         }
 
         userMessage += `\n\n### METAPROMPTING STEP ###
@@ -864,7 +1015,7 @@ Refine your output based on this self-assessment.`;
         console.log('OpenAI API call successful');
         
         // Comprehensive validation: Check if output is properly enhanced and structured
-        const validationResult = validateEnhancedOutput(result, prompt);
+        const validationResult = validateEnhancedOutput(result, prompt, context);
         
         if (!validationResult.isValid) {
           console.log('Result validation failed:', validationResult.reasons);
@@ -885,7 +1036,9 @@ Your output MUST be 3-5x more detailed than the input. You MUST add:
 - Measurable success criteria
 - Specific execution guidelines
 
-### REQUIRED STRUCTURE (Use XML-like tags) ###
+### REQUIRED STRUCTURE (Use XML tags OR Markdown - be consistent) ###
+
+**OPTION 1: XML-like Tags Format**
 
 <role>
 [Specific expert role with qualifications and experience - ADD details not in input]
@@ -933,6 +1086,46 @@ Your response must meet these criteria:
 • [Guideline 1: Specific execution instruction - ADD this]
 • [Guideline 2: Specific execution instruction - ADD this]
 </guidelines>
+
+**OR OPTION 2: Markdown Format with Headers**
+
+**ROLE & EXPERTISE:**
+[Specific expert role with qualifications and experience - ADD details not in input]
+
+**CONTEXT & BACKGROUND:**
+[Relevant background information and context - ADD this if missing]
+
+**TASK & OBJECTIVE:**
+[Clear, detailed task description - EXPAND beyond the input]
+
+**CONSTRAINTS & REQUIREMENTS:**
+• [Constraint 1 - ADD constraints not mentioned in input]
+• [Constraint 2 - ADD constraints not mentioned in input]
+• [Additional constraints]
+
+**REASONING PROCESS:**
+[Step-by-step Chain-of-Thought approach - ADD detailed reasoning steps]
+
+**EXAMPLES & FEW-SHOT LEARNING:**
+Example 1:
+[Example output or pattern - ADD this]
+
+Example 2:
+[Example output or pattern - ADD this if appropriate]
+
+**OUTPUT FORMAT & STRUCTURE:**
+• [Section 1: Specific structure requirements - ADD details]
+• [Section 2: Specific structure requirements - ADD details]
+• [Formatting specifications - ADD this]
+
+**SUCCESS CRITERIA:**
+Your response must meet these criteria:
+• [Criterion 1: Measurable and specific - ADD this]
+• [Criterion 2: Measurable and specific - ADD this]
+
+**GUIDELINES & BEST PRACTICES:**
+• [Guideline 1: Specific execution instruction - ADD this]
+• [Guideline 2: Specific execution instruction - ADD this]
 
 ### ORIGINAL USER REQUEST ###
 """
