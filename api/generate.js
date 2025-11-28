@@ -445,7 +445,7 @@ CRITICAL: After creating your initial prompt, you MUST perform metaprompting:
 
 ### Example 1: Simple Request - ENHANCEMENT vs COPYING
 
-```
+\`\`\`
 === USER REQUEST ===
 "write a blog post about AI"
 
@@ -533,11 +533,11 @@ Your blog post must:
 • End with an inspiring, forward-looking statement
 
 </guidelines>
-```
+\`\`\`
 
 ### Example 2: Complex Request - Comprehensive Enhancement
 
-```
+\`\`\`
 === USER REQUEST ===
 "explain quantum computing"
 
@@ -653,11 +653,11 @@ Your explanation must:
 • Maintain objective, scholarly tone throughout
 
 </guidelines>
-```
+\`\`\`
 
 ### Example 3: Coding Request - Technical Enhancement
 
-```
+\`\`\`
 === USER REQUEST ===
 "create a REST API endpoint for user authentication"
 
@@ -792,7 +792,7 @@ Your implementation must:
 • Follow Node.js best practices: Async/await, proper error handling, middleware organization
 
 </guidelines>
-```
+\`\`\`
 
 ## FINAL REMINDERS - CRITICAL REQUIREMENTS
 
@@ -1001,14 +1001,27 @@ Refine your output based on this self-assessment.`;
         try {
           completion = await openaiInstance.chat.completions.create(apiConfig);
         } catch (modelError) {
-          console.log('gpt-5.1 failed, trying gpt-5.0 as fallback');
+          console.log('gpt-5.1 failed, trying gpt-5.0 as fallback. Error:', modelError.message);
           // Remove reasoning_effort for fallback model if it doesn't support it
           const fallbackConfig = {
             ...apiConfig,
             model: 'gpt-5.0'
           };
-          delete fallbackConfig.reasoning_effort; // gpt-5.0 may not support this parameter
-          completion = await openaiInstance.chat.completions.create(fallbackConfig);
+          // gpt-5.0 may not support reasoning_effort, so we'll try without it if needed
+          try {
+            completion = await openaiInstance.chat.completions.create(fallbackConfig);
+          } catch (fallbackError) {
+            // If gpt-5.0 also fails with reasoning_effort, try without it
+            console.log('gpt-5.0 with reasoning_effort failed, trying without reasoning_effort. Error:', fallbackError.message);
+            delete fallbackConfig.reasoning_effort;
+            try {
+              completion = await openaiInstance.chat.completions.create(fallbackConfig);
+            } catch (finalError) {
+              // If all fallbacks fail, throw the original error
+              console.error('All model fallbacks failed. Original error:', modelError.message);
+              throw modelError;
+            }
+          }
         }
         
         result = completion.choices[0].message.content;
@@ -1156,13 +1169,27 @@ ${prompt}
             result = retryCompletion.choices[0].message.content;
             console.log('Retry OpenAI API call successful');
           } catch (retryError) {
-            // Fallback without reasoning_effort if retry also fails
-            console.log('Retry with reasoning_effort failed, trying without it');
-            delete retryConfig.reasoning_effort;
+            // Fallback to gpt-5.0 if retry also fails
+            console.log('Retry with gpt-5.1 failed, trying gpt-5.0 as fallback. Error:', retryError.message);
             retryConfig.model = 'gpt-5.0';
-            const retryCompletion = await openaiInstance.chat.completions.create(retryConfig);
-            result = retryCompletion.choices[0].message.content;
-            console.log('Retry OpenAI API call successful (fallback)');
+            try {
+              const retryCompletion = await openaiInstance.chat.completions.create(retryConfig);
+              result = retryCompletion.choices[0].message.content;
+              console.log('Retry OpenAI API call successful (gpt-5.0 with reasoning_effort)');
+            } catch (retryError2) {
+              // If gpt-5.0 also fails with reasoning_effort, try without it
+              console.log('Retry with gpt-5.0 and reasoning_effort failed, trying without reasoning_effort. Error:', retryError2.message);
+              delete retryConfig.reasoning_effort;
+              try {
+                const retryCompletion = await openaiInstance.chat.completions.create(retryConfig);
+                result = retryCompletion.choices[0].message.content;
+                console.log('Retry OpenAI API call successful (gpt-5.0 fallback)');
+              } catch (finalRetryError) {
+                // If all retry fallbacks fail, throw the original retry error
+                console.error('All retry fallbacks failed. Original retry error:', retryError.message);
+                throw retryError;
+              }
+            }
           }
         }
       } catch (openaiError) {
@@ -1174,8 +1201,10 @@ ${prompt}
           response: openaiError.response?.data
         });
         
-        // Instead of falling back to local, return an error
-        throw new Error(`AI enhancement service error: ${openaiError.message}`);
+        // Provide more detailed error message
+        const errorMessage = openaiError.message || 'Unknown error';
+        const errorStatus = openaiError.status || 'Unknown';
+        throw new Error(`AI enhancement service error (${errorStatus}): ${errorMessage}`);
       }
     } else {
       // No API key available, return error instead of local fallback
