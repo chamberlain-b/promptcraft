@@ -181,7 +181,8 @@
   word-break: break-word;
   hyphens: auto;
   max-width: 100%;
-  overflow: hidden;
+  white-space: pre-wrap;
+  overflow: auto;
 }
 
 .textarea-container {

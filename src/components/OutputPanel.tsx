@@ -50,8 +50,8 @@ const OutputPanel: FC = () => {
         <div className="flex-1 min-h-[400px] overflow-y-auto custom-scrollbar">
           {output ? (
             <div className="h-full flex flex-col">
-              <div className="flex-1">
-                <p className="text-gray-200 leading-relaxed text-container">{output}</p>
+              <div className="flex-1 overflow-hidden">
+                <pre className="text-gray-200 leading-relaxed text-container">{output}</pre>
                 <div className="mt-3 p-2 bg-blue-900/20 border border-blue-600/30 rounded-lg">
                   <p className="text-xs text-blue-300 text-container">
                     💡 This is an enhanced prompt ready to use with ChatGPT, Claude, or other AI systems. Copy and paste it directly!
