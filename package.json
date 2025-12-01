@@ -24,6 +24,7 @@
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.14",
     "jsdom": "^27.0.0",
+    "npm-run-all": "^4.1.5",
     "postcss": "^8.4.24",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.9.3",
@@ -32,7 +33,8 @@
   },
   "scripts": {
     "start": "vite",
-    "dev": "vite",
+    "dev": "npm-run-all --parallel dev:client server",
+    "dev:client": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "server": "node server.js",
