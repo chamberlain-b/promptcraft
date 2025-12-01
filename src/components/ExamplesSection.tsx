@@ -39,6 +39,7 @@ const ExamplesSection: FC = () => {
               key={example.title}
               role="button"
               tabIndex={0}
+              aria-label={example.title}
               onClick={() => useExample(example)}
               onKeyDown={handleCardKeyDown}
               className="text-left surface-panel hover:bg-gray-700/60 transition-all hover:border-teal-400/50 group min-h-[360px] md:min-h-[420px] lg:min-h-[440px] flex flex-col p-6 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-400"

@@ -115,10 +115,13 @@ Example 1: Professional blog structure
 
     // Mock clipboard API
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: {
+    const originalClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
         writeText: writeTextMock,
       },
+      configurable: true,
+      writable: true,
     });
 
     vi.mocked(llmService.default.generateEnhancedPrompt).mockResolvedValue({
@@ -152,13 +155,21 @@ Example 1: Professional blog structure
       expect(screen.getByText(/Enhanced prompt output/i)).toBeInTheDocument();
     });
 
-    // Find and click copy button
-    const copyButton = screen.getByRole('button', { name: /copy/i });
-    await user.click(copyButton);
+    try {
+      // Find and click copy button
+      const copyButton = screen.getByRole('button', { name: /copy/i });
+      await user.click(copyButton);
 
-    await waitFor(() => {
-      expect(writeTextMock).toHaveBeenCalledWith('Enhanced prompt output');
-    });
+      await waitFor(() => {
+        expect(writeTextMock).toHaveBeenCalledWith('Enhanced prompt output');
+      });
+    } finally {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: originalClipboard,
+        configurable: true,
+        writable: true,
+      });
+    }
   });
 
   it('should clear all fields when clear button is clicked', async () => {
