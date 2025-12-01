@@ -12,7 +12,9 @@ import {
   Plus,
   RefreshCw,
   Upload,
-  Copy
+  Copy,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { usePrompt } from '../context/PromptContext';
 import type { HistoryItem, Suggestion } from '../context/PromptContext.d';
@@ -67,6 +69,10 @@ const InputPanel = () => {
   const [validationError, setValidationError] = useState('');
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [importStatus, setImportStatus] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
   
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -123,16 +129,25 @@ const InputPanel = () => {
 
     const validation = validateImportFile(file);
     if (!validation.valid) {
-      alert(validation.error);
+      setImportStatus({ type: 'error', message: validation.error });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
 
     try {
       const data = await importFromJSON(file);
       importHistory(data.prompts, 'merge');
-      alert(`Successfully imported ${data.prompts.length} prompts`);
+      setImportStatus({
+        type: 'success',
+        message: `Successfully imported ${data.prompts.length} prompts`,
+      });
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to import file');
+      setImportStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to import file',
+      });
     }
 
     // Reset file input
@@ -311,6 +326,24 @@ const InputPanel = () => {
               </button>
             </div>
           </div>
+
+          {importStatus && (
+            <div
+              role="status"
+              className={`flex items-center gap-2 text-sm font-medium rounded-lg p-3 mb-3 border ${
+                importStatus.type === 'success'
+                  ? 'bg-emerald-900/30 border-emerald-700/50 text-emerald-100'
+                  : 'bg-red-900/30 border-red-700/50 text-red-100'
+              }`}
+            >
+              {importStatus.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+              ) : (
+                <AlertCircle className="w-4 h-4" aria-hidden="true" />
+              )}
+              <span className="leading-snug">{importStatus.message}</span>
+            </div>
+          )}
 
           {history.length > 0 && (
             <SearchBar

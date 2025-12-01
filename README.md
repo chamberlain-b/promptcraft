@@ -54,13 +54,13 @@ Transform your casual ideas into powerful AI prompts with intelligent enhancemen
    npm install
    ```
 
-3. **Start the development server**
+3. **Start the development servers (client + API)**
    ```bash
    npm run dev
    ```
 
 4. **Open your browser**
-   Navigate to `http://localhost:5173`
+   Navigate to `http://localhost:5173` (requests to `/api` are proxied to the Express server on port 3001)
 
 ### Configuration
 
@@ -175,7 +175,7 @@ src/
 ```
 
 ### Available Scripts
-- `npm run dev` - Start development server
+- `npm run dev` - Start Vite dev server and local API server together
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 

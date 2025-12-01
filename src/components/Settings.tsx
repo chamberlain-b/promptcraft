@@ -28,6 +28,7 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
   const [message, setMessage] = useState('');
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -113,7 +114,7 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
   };
 
   const handleClearData = () => {
-    setIsClearDialogOpen(true);
+    setIsConfirmDialogOpen(true);
   };
 
   const confirmClearData = () => {
@@ -287,6 +288,15 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
             {isSaving ? 'Saving...' : 'Save Settings'}
           </button>
         </div>
+        <ConfirmDialog
+          isOpen={isConfirmDialogOpen}
+          title="Clear all data"
+          message="Are you sure you want to clear all data? This action cannot be undone."
+          confirmLabel="Clear data"
+          confirmVariant="danger"
+          onConfirm={confirmClearData}
+          onCancel={() => setIsConfirmDialogOpen(false)}
+        />
       </div>
       <ConfirmDialog
         isOpen={isClearDialogOpen}
