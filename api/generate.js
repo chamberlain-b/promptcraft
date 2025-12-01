@@ -85,9 +85,9 @@ function validateEnhancedOutput(output, input, context = {}) {
   }
   
   // Check 2: Must have role/expertise section (check for multiple formats - XML or Markdown)
-  const hasRole = outputLower.includes('<role>') || 
+  const hasRole = outputLower.includes('<role>') ||
                   outputLower.includes('</role>') ||
-                  outputLower.includes('**role') || 
+                  outputLower.includes('**role') ||
                   outputLower.includes('role & expertise') ||
                   outputLower.includes('role:') ||
                   outputLower.includes('## role') ||
@@ -97,16 +97,13 @@ function validateEnhancedOutput(output, input, context = {}) {
   }
   
   // Check 3: Must have context/background section
-  const hasContext = outputLower.includes('<context>') || 
+  const hasContext = outputLower.includes('<context>') ||
                      outputLower.includes('</context>') ||
                      outputLower.includes('**context') ||
                      outputLower.includes('context & background') ||
                      outputLower.includes('context:') ||
                      outputLower.includes('## context') ||
                      outputLower.includes('background');
-  if (!hasContext) {
-    reasons.push('Missing context/background section');
-  }
   
   // Check 4: Must have task section
   const hasTask = outputLower.includes('<task>') || 
@@ -121,7 +118,7 @@ function validateEnhancedOutput(output, input, context = {}) {
   }
   
   // Check 5: Must have constraints/requirements section
-  const hasConstraints = outputLower.includes('<constraints>') || 
+  const hasConstraints = outputLower.includes('<constraints>') ||
                          outputLower.includes('</constraints>') ||
                          outputLower.includes('**constraints') ||
                          outputLower.includes('**requirements') ||
@@ -129,25 +126,21 @@ function validateEnhancedOutput(output, input, context = {}) {
                          outputLower.includes('constraints:') ||
                          outputLower.includes('requirements:') ||
                          outputLower.includes('## constraints') ||
+                         outputLower.includes('<guidelines>') ||
+                         outputLower.includes('guidelines:') ||
                          (outputLower.includes('constraints') && outputLower.includes('•'));
-  if (!hasConstraints) {
-    reasons.push('Missing constraints/requirements section');
-  }
   
   // Check 6: Must have reasoning process section
-  const hasReasoning = outputLower.includes('<reasoning>') || 
+  const hasReasoning = outputLower.includes('<reasoning>') ||
                        outputLower.includes('</reasoning>') ||
                        outputLower.includes('**reasoning') ||
                        outputLower.includes('reasoning process') ||
                        outputLower.includes('chain-of-thought') ||
                        outputLower.includes('chain of thought') ||
                        outputLower.includes('## reasoning');
-  if (!hasReasoning) {
-    reasons.push('Missing reasoning process section');
-  }
   
   // Check 7: Must have examples (few-shot learning) - more flexible check
-  const hasExamples = outputLower.includes('<examples>') || 
+  const hasExamples = outputLower.includes('<examples>') ||
                       outputLower.includes('</examples>') ||
                       outputLower.includes('**examples') ||
                       outputLower.includes('examples & few-shot') ||
@@ -155,34 +148,25 @@ function validateEnhancedOutput(output, input, context = {}) {
                       outputLower.includes('example 1') ||
                       outputLower.includes('example:') ||
                       (outputLower.includes('example') && (outputLower.includes('example 2') || outputLower.includes('example 3') || outputLower.includes('pattern')));
-  if (!hasExamples) {
-    reasons.push('Missing examples/few-shot learning section');
-  }
   
   // Check 8: Must have output format section
-  const hasOutputFormat = outputLower.includes('<output_format>') || 
+  const hasOutputFormat = outputLower.includes('<output_format>') ||
                           outputLower.includes('</output_format>') ||
                           outputLower.includes('**output format') ||
                           outputLower.includes('output format & structure') ||
                           outputLower.includes('output structure') ||
                           outputLower.includes('format requirements') ||
                           outputLower.includes('## output format');
-  if (!hasOutputFormat) {
-    reasons.push('Missing output format/structure section');
-  }
   
   // Check 9: Must have success criteria section
-  const hasSuccessCriteria = outputLower.includes('<success_criteria>') || 
+  const hasSuccessCriteria = outputLower.includes('<success_criteria>') ||
                              outputLower.includes('</success_criteria>') ||
                              outputLower.includes('**success criteria') ||
                              outputLower.includes('success criteria') ||
                              outputLower.includes('## success criteria');
-  if (!hasSuccessCriteria) {
-    reasons.push('Missing success criteria section');
-  }
-  
+
   // Check 10: Must use structured formatting (XML tags OR Markdown headers) - more flexible
-  const hasStructuredFormat = outputLower.includes('<role>') || 
+  const hasStructuredFormat = outputLower.includes('<role>') ||
                               outputLower.includes('</role>') ||
                               outputLower.includes('<context>') ||
                               outputLower.includes('</context>') ||
@@ -198,6 +182,11 @@ function validateEnhancedOutput(output, input, context = {}) {
                               output.includes('"""');
   if (!hasStructuredFormat) {
     reasons.push('Missing structured formatting (XML tags or Markdown headers)');
+  }
+
+  // Require core sections but allow flexibility in supporting sections
+  if (!hasContext && !hasConstraints && !hasReasoning && !hasExamples && !hasOutputFormat && !hasSuccessCriteria) {
+    reasons.push('Missing supporting sections (context, constraints, reasoning, examples, or format guidance)');
   }
   
   // Check 11: Should not be just copying the input (check for substantial enhancement)

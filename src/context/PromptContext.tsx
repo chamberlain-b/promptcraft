@@ -359,7 +359,7 @@ export const PromptProvider: React.FC<PromptProviderProps> = ({ children }) => {
       const result = await llmService.generateEnhancedPrompt(input.trim(), context);
 
       if (result.error) {
-        setOutput(`⚠️ ${result.error}`);
+        setOutput(result.error);
         setLlmStatus('error');
         setRequestsLeft(result.requestsLeft ?? 0);
         setRequestLimit(result.limit ?? REQUEST_LIMIT);
@@ -391,7 +391,7 @@ export const PromptProvider: React.FC<PromptProviderProps> = ({ children }) => {
       setHistory((prev) => [historyItem, ...prev.slice(0, HISTORY_LIMIT - 1)]);
     } catch (error) {
       console.error('Generation error:', error);
-      setOutput('⚠️ AI enhancement service is temporarily unavailable. Please try again in a few moments.');
+      setOutput('AI enhancement service is temporarily unavailable. Please try again in a few moments.');
       setLlmStatus('error');
     } finally {
       setIsGenerating(false);

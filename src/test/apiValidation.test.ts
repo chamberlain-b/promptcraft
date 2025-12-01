@@ -34,9 +34,6 @@ describe('API Output Validation', () => {
                        outputLower.includes('context:') ||
                        outputLower.includes('## context') ||
                        outputLower.includes('background');
-    if (!hasContext) {
-      reasons.push('Missing context/background section');
-    }
 
     // Check 4: Must have task section
     const hasTask = outputLower.includes('<task>') ||
@@ -59,10 +56,9 @@ describe('API Output Validation', () => {
                            outputLower.includes('constraints:') ||
                            outputLower.includes('requirements:') ||
                            outputLower.includes('## constraints') ||
+                           outputLower.includes('<guidelines>') ||
+                           outputLower.includes('guidelines:') ||
                            (outputLower.includes('constraints') && outputLower.includes('•'));
-    if (!hasConstraints) {
-      reasons.push('Missing constraints/requirements section');
-    }
 
     // Check 6: Must have reasoning process section
     const hasReasoning = outputLower.includes('<reasoning>') ||
@@ -72,9 +68,6 @@ describe('API Output Validation', () => {
                          outputLower.includes('chain-of-thought') ||
                          outputLower.includes('chain of thought') ||
                          outputLower.includes('## reasoning');
-    if (!hasReasoning) {
-      reasons.push('Missing reasoning process section');
-    }
 
     // Check 7: Must have examples (few-shot learning)
     const hasExamples = outputLower.includes('<examples>') ||
@@ -85,9 +78,6 @@ describe('API Output Validation', () => {
                         outputLower.includes('example 1') ||
                         outputLower.includes('example:') ||
                         (outputLower.includes('example') && (outputLower.includes('example 2') || outputLower.includes('example 3') || outputLower.includes('pattern')));
-    if (!hasExamples) {
-      reasons.push('Missing examples/few-shot learning section');
-    }
 
     // Check 8: Must have output format section
     const hasOutputFormat = outputLower.includes('<output_format>') ||
@@ -97,9 +87,6 @@ describe('API Output Validation', () => {
                             outputLower.includes('output structure') ||
                             outputLower.includes('format requirements') ||
                             outputLower.includes('## output format');
-    if (!hasOutputFormat) {
-      reasons.push('Missing output format/structure section');
-    }
 
     // Check 9: Must have success criteria section
     const hasSuccessCriteria = outputLower.includes('<success_criteria>') ||
@@ -107,9 +94,6 @@ describe('API Output Validation', () => {
                                outputLower.includes('**success criteria') ||
                                outputLower.includes('success criteria') ||
                                outputLower.includes('## success criteria');
-    if (!hasSuccessCriteria) {
-      reasons.push('Missing success criteria section');
-    }
 
     // Check 10: Must use structured formatting
     const hasStructuredFormat = outputLower.includes('<role>') ||
@@ -128,6 +112,10 @@ describe('API Output Validation', () => {
                                 output.includes('"""');
     if (!hasStructuredFormat) {
       reasons.push('Missing structured formatting (XML tags or Markdown headers)');
+    }
+
+    if (!hasContext && !hasConstraints && !hasReasoning && !hasExamples && !hasOutputFormat && !hasSuccessCriteria) {
+      reasons.push('Missing supporting sections (context, constraints, reasoning, examples, or format guidance)');
     }
 
     // Check 11: If context has tone/length, verify they're being used

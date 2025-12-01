@@ -41,7 +41,7 @@ const OutputPanel: FC = () => {
               ) : (
                 <>
                   <Brain className="w-4 h-4 text-red-400" aria-hidden="true" />
-                  <span className="text-sm text-red-300 font-semibold">⚠️ Service Issue</span>
+                  <span className="text-sm text-red-300 font-semibold">Service Issue</span>
                 </>
               )}
             </div>

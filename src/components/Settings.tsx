@@ -263,10 +263,11 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
             </label>
             <button
               onClick={handleClearData}
+              aria-label="Reset all saved data"
               className="px-5 py-2 bg-red-400/20 backdrop-blur-md border border-red-400/40 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-red-400/60 hover:bg-red-400/30 hover:border-red-300/80 hover:shadow-red-400/30"
             >
               <Trash2 className="w-5 h-5" />
-              Clear All Data
+              Reset All Data
             </button>
           </div>
         </div>
@@ -290,9 +291,9 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
         </div>
         <ConfirmDialog
           isOpen={isConfirmDialogOpen}
-          title="Clear all data"
-          message="Are you sure you want to clear all data? This action cannot be undone."
-          confirmLabel="Clear data"
+          title="Reset all data"
+          message="Are you sure you want to reset all data? This action cannot be undone."
+          confirmLabel="Reset data"
           confirmVariant="danger"
           onConfirm={confirmClearData}
           onCancel={() => setIsConfirmDialogOpen(false)}
@@ -300,9 +301,9 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
       </div>
       <ConfirmDialog
         isOpen={isClearDialogOpen}
-        title="Clear all data?"
+        title="Reset all data?"
         message="This will permanently delete your history and session context. This action cannot be undone."
-        confirmLabel="Clear data"
+        confirmLabel="Reset data"
         confirmVariant="danger"
         onConfirm={confirmClearData}
         onCancel={() => setIsClearDialogOpen(false)}
