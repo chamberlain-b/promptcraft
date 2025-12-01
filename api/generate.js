@@ -869,10 +869,21 @@ export default async function handler(req, res) {
     let result;
     let useOpenAI = false;
 
-    // Use environment API key only
-    const effectiveApiKey = process.env.OPENAI_API_KEY;
+    // Determine API key from environment or request header
+    const headerApiKeyRaw = Array.isArray(req.headers['x-api-key']) ? req.headers['x-api-key'][0] : req.headers['x-api-key'];
+    const headerApiKey = typeof headerApiKeyRaw === 'string' ? headerApiKeyRaw.trim() : undefined;
+
+    const effectiveApiKey = process.env.OPENAI_API_KEY || headerApiKey;
+    const apiKeySource = process.env.OPENAI_API_KEY ? 'environment' : headerApiKey ? 'header' : null;
     console.log('Effective API Key available:', effectiveApiKey ? 'Yes' : 'No');
+    console.log('API Key source:', apiKeySource || 'none');
     console.log('API Key format check:', effectiveApiKey ? (effectiveApiKey.startsWith('sk-') ? 'Valid format (starts with sk-)' : 'Warning: API key does not start with sk-') : 'No key');
+
+    if (apiKeySource === 'header' && (!effectiveApiKey || !effectiveApiKey.startsWith('sk-'))) {
+      const invalidKeyError = new Error('Invalid API key format provided in X-API-Key header.');
+      invalidKeyError.status = 400;
+      throw invalidKeyError;
+    }
     
     if (effectiveApiKey) {
       // Validate API key format
@@ -1294,7 +1305,7 @@ ${prompt}
         }
         // Handle authentication errors
         else if (errorDetails.status === 401 || errorDetails.code === 'invalid_api_key') {
-          errorMessage = 'Invalid API key. Please check your OPENAI_API_KEY environment variable.';
+          errorMessage = 'Invalid API key. Please check your OPENAI_API_KEY environment variable or X-API-Key header.';
           errorStatus = 401;
         }
         // Handle rate limit errors
@@ -1316,7 +1327,7 @@ ${prompt}
       }
     } else {
       // No API key available, return error instead of local fallback
-      throw new Error('AI enhancement service is not available');
+      throw new Error('AI enhancement service is not available. Provide OPENAI_API_KEY env or X-API-Key header.');
     }
 
     console.log('Final enhancement method used: OpenAI AI');
