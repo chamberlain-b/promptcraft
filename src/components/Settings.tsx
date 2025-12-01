@@ -26,6 +26,7 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
@@ -297,6 +298,15 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
           onCancel={() => setIsConfirmDialogOpen(false)}
         />
       </div>
+      <ConfirmDialog
+        isOpen={isClearDialogOpen}
+        title="Clear all data?"
+        message="This will permanently delete your history and session context. This action cannot be undone."
+        confirmLabel="Clear data"
+        confirmVariant="danger"
+        onConfirm={confirmClearData}
+        onCancel={() => setIsClearDialogOpen(false)}
+      />
     </div>
   );
 };
