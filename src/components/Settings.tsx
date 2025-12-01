@@ -1,5 +1,6 @@
 import { type FC, useState, useEffect, useRef } from 'react';
 import { Settings as SettingsIcon, User, Save, Download, Upload, Trash2 } from 'lucide-react';
+import ConfirmDialog from './ConfirmDialog';
 import contextService from '../services/contextService';
 
 interface UserPreferences {
@@ -25,6 +26,7 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -111,12 +113,14 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
   };
 
   const handleClearData = () => {
-    if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-      contextService.clearHistory();
-      contextService.clearSessionContext();
-      setMessage('All data cleared successfully!');
-      setTimeout(() => setMessage(''), 3000);
-    }
+    setIsClearDialogOpen(true);
+  };
+
+  const confirmClearData = () => {
+    contextService.clearHistory();
+    contextService.clearSessionContext();
+    setMessage('All data cleared successfully!');
+    setTimeout(() => setMessage(''), 3000);
   };
 
   if (!isOpen) return null;
@@ -284,6 +288,15 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={isClearDialogOpen}
+        title="Clear all data?"
+        message="This will permanently delete your history and session context. This action cannot be undone."
+        confirmLabel="Clear data"
+        confirmVariant="danger"
+        onConfirm={confirmClearData}
+        onCancel={() => setIsClearDialogOpen(false)}
+      />
     </div>
   );
 };
