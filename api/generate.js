@@ -1,6 +1,32 @@
 import { OpenAI } from 'openai';
 import { checkRateLimit, incrementUsage, getUsageStats } from './rateLimit.js';
 
+const MAX_PROMPT_LENGTH = 5000;
+const MAX_CONTEXT_SIZE = 4000; // characters after JSON serialization
+
+function buildUsageMeta(req) {
+  try {
+    const stats = getUsageStats(req);
+    return {
+      requestsLeft: stats?.remaining ?? null,
+      limit: stats?.limit ?? null,
+      resetAt: stats?.resetAt
+    };
+  } catch (err) {
+    console.warn('Unable to read usage stats:', err);
+    return { requestsLeft: null, limit: null, resetAt: null };
+  }
+}
+
+function respondWithError(res, req, statusCode, message) {
+  const usageMeta = buildUsageMeta(req);
+  return res.status(statusCode).json({
+    error: message,
+    ...usageMeta,
+    enhanced: false
+  });
+}
+
 // Initialize OpenAI only if API key is available
 let openai = null;
 if (process.env.OPENAI_API_KEY) {
@@ -831,7 +857,7 @@ export default async function handler(req, res) {
 
   // Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return respondWithError(res, req, 405, 'Method not allowed');
   }
 
   // Check rate limit
@@ -842,17 +868,61 @@ export default async function handler(req, res) {
       error: 'Monthly free request limit reached. Limit resets at the beginning of next month.',
       requestsLeft: 0,
       limit: rateLimitStatus.limit,
-      resetAt: rateLimitStatus.resetAt
+      resetAt: rateLimitStatus.resetAt,
+      enhanced: false
     });
   }
 
   try {
-    const { prompt, context } = req.body;
-    console.log('User input received:', prompt);
-    console.log('Environment API Key:', process.env.OPENAI_API_KEY ? 'Yes' : 'No');
-    
+    const contentType = req.headers['content-type'];
+    if (contentType && !contentType.includes('application/json')) {
+      return respondWithError(res, req, 415, 'Unsupported Content-Type. Please use application/json.');
+    }
+
+    if (!req.body || typeof req.body !== 'object') {
+      return respondWithError(res, req, 400, 'Invalid JSON body.');
+    }
+
+    const { prompt: rawPrompt, context } = req.body;
+    const prompt = typeof rawPrompt === 'string' ? rawPrompt.trim() : null;
+
+    console.log('User input received:', {
+      promptLength: typeof prompt === 'string' ? prompt.length : null,
+      hasContext: !!context
+    });
+
     if (!prompt) {
-      throw new Error('No prompt provided in request body.');
+      const error = new Error('No prompt provided in request body.');
+      error.status = 400;
+      throw error;
+    }
+
+    if (typeof prompt !== 'string') {
+      const error = new Error('Prompt must be a string.');
+      error.status = 400;
+      throw error;
+    }
+
+    if (prompt.length > MAX_PROMPT_LENGTH) {
+      const error = new Error(`Prompt is too long. Maximum length is ${MAX_PROMPT_LENGTH} characters.`);
+      error.status = 413;
+      throw error;
+    }
+
+    if (context !== undefined) {
+      const isValidContextObject = context && typeof context === 'object' && !Array.isArray(context);
+      if (!isValidContextObject) {
+        const error = new Error('Context must be an object.');
+        error.status = 400;
+        throw error;
+      }
+
+      const contextSize = JSON.stringify(context).length;
+      if (contextSize > MAX_CONTEXT_SIZE) {
+        const error = new Error(`Context is too large. Maximum size is ${MAX_CONTEXT_SIZE} characters.`);
+        error.status = 413;
+        throw error;
+      }
     }
 
     let result;
@@ -1351,6 +1421,7 @@ ${prompt}
       error: err.message || 'AI enhancement service is temporarily unavailable. Please try again in a few moments.',
       requestsLeft: stats.remaining,
       limit: stats.limit,
+      resetAt: stats.resetAt,
       enhanced: false
     };
 
