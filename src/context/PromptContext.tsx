@@ -222,7 +222,12 @@ export const PromptProvider: React.FC<PromptProviderProps> = ({ children }) => {
       setSuggestions([]);
       return;
     }
-    setSuggestions(generateSuggestions(input));
+
+    const timer = setTimeout(() => {
+      setSuggestions(generateSuggestions(input));
+    }, 300);
+
+    return () => clearTimeout(timer);
   }, [input, generateSuggestions]);
 
   const applySuggestion = useCallback((suggestion: Suggestion) => {
@@ -456,10 +461,8 @@ export const PromptProvider: React.FC<PromptProviderProps> = ({ children }) => {
   }, []);
 
   const clearHistory = useCallback(() => {
-    if (window.confirm('Are you sure you want to clear all history?')) {
-      setHistory([]);
-      contextService.clearHistory();
-    }
+    setHistory([]);
+    contextService.clearHistory();
   }, []);
 
   const checkLlmStatus = useCallback(() => {

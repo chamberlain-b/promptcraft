@@ -14,7 +14,9 @@ import {
   Upload,
   Copy,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  X,
+  Clock
 } from 'lucide-react';
 import { usePrompt } from '../context/PromptContext';
 import type { HistoryItem, Suggestion } from '../context/PromptContext.d';
@@ -29,7 +31,8 @@ import SearchBar from './SearchBar';
 import EmptyState from './EmptyState';
 import ConfirmDialog from './ConfirmDialog';
 import { validatePromptInput, getWordCount } from '../utils/validation';
-import { exportToJSON, exportToCSV, importFromJSON, validateImportFile } from '../utils/exportImport';
+import { exportToJSON, importFromJSON, validateImportFile } from '../utils/exportImport';
+import { formatRelativeTime } from '../utils/formatTime';
 
 const InputPanel = () => {
   const {
@@ -58,7 +61,6 @@ const InputPanel = () => {
       clearAll,
       loadFromHistory,
       deleteHistoryItem,
-      exportHistory,
       clearHistory,
       duplicatePrompt,
       importHistory
@@ -73,9 +75,10 @@ const InputPanel = () => {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
-  
+
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const importTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const historyPanelId = 'prompt-history-panel';
   const suggestionsPanelId = 'smart-suggestions-panel';
 
@@ -91,11 +94,23 @@ const InputPanel = () => {
     textarea.style.height = `${nextHeight}px`;
   }, [input]);
 
+  // Auto-dismiss import status after 4 seconds
+  useEffect(() => {
+    if (importStatus) {
+      if (importTimerRef.current) clearTimeout(importTimerRef.current);
+      importTimerRef.current = setTimeout(() => {
+        setImportStatus(null);
+      }, 4000);
+    }
+    return () => {
+      if (importTimerRef.current) clearTimeout(importTimerRef.current);
+    };
+  }, [importStatus]);
+
   const handleInputChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     const value = event.target.value;
     setInput(value);
-    
-    // Clear validation error when user starts typing
+
     if (validationError && value.length > 0) {
       setValidationError('');
     }
@@ -113,10 +128,6 @@ const InputPanel = () => {
 
   const handleExportJSON = () => {
     exportToJSON(history);
-  };
-
-  const handleExportCSV = () => {
-    exportToCSV(history);
   };
 
   const handleImport = () => {
@@ -150,7 +161,6 @@ const InputPanel = () => {
       });
     }
 
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -180,7 +190,6 @@ const InputPanel = () => {
     duplicatePrompt(item);
   };
 
-  // Filter history based on search query
   const filteredHistory = history.filter((item) =>
     item.input.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.output.toLowerCase().includes(searchQuery.toLowerCase())
@@ -241,7 +250,7 @@ const InputPanel = () => {
             <h4 className="text-sm font-medium text-blue-300">Context Detected</h4>
           </div>
           <div className="text-sm text-blue-200">
-            <p>Intent: <span className="font-medium">{currentIntent?.intent}</span></p>
+            <p>Intent: <span className="font-medium capitalize">{currentIntent?.intent}</span></p>
             <p>Confidence: <span className="font-medium">{Math.round((currentIntent?.confidence ?? 0) * 100)}%</span></p>
             {contextInfo.recentHistory?.length > 0 && (
               <p>Using {contextInfo.recentHistory.length} recent interactions for context</p>
@@ -255,10 +264,10 @@ const InputPanel = () => {
           <button
             type="button"
             onClick={() => setShowHistory(!showHistory)}
-            className={`p-2 rounded-lg transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               showHistory
                 ? 'bg-teal-500/30 text-teal-300'
-                : 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50'
+                : 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50 hover:text-gray-300'
             }`}
             title={showHistory ? 'Hide history' : 'Show history'}
             aria-pressed={showHistory}
@@ -266,13 +275,21 @@ const InputPanel = () => {
             aria-expanded={showHistory}
           >
             <History className="w-4 h-4" aria-hidden="true" />
+            <span className="hidden sm:inline">History</span>
+            {history.length > 0 && (
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                showHistory ? 'bg-teal-500/40 text-teal-200' : 'bg-gray-600/60 text-gray-300'
+              }`}>
+                {history.length}
+              </span>
+            )}
           </button>
         </div>
         {recordingSupported && (
           <button
             type="button"
             onClick={toggleVoiceRecording}
-            className={`p-2 rounded-lg transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               isListening
                 ? 'bg-red-500 text-white animate-pulse'
                 : 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
@@ -282,9 +299,15 @@ const InputPanel = () => {
             aria-label={isListening ? 'Stop voice recording' : 'Start voice recording'}
           >
             {isListening ? (
-              <MicOff className="w-4 h-4" aria-hidden="true" />
+              <>
+                <MicOff className="w-4 h-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Stop</span>
+              </>
             ) : (
-              <Mic className="w-4 h-4" aria-hidden="true" />
+              <>
+                <Mic className="w-4 h-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Voice</span>
+              </>
             )}
           </button>
         )}
@@ -299,28 +322,31 @@ const InputPanel = () => {
         >
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-gray-300">Recent Prompts</h4>
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               <button
                 type="button"
                 onClick={handleImport}
-                className="p-1.5 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded-lg transition-colors"
                 title="Import history"
+                aria-label="Import history"
               >
                 <Upload className="w-4 h-4" aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={handleExportJSON}
-                className="p-1.5 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded-lg transition-colors"
                 title="Export as JSON"
+                aria-label="Export history as JSON"
               >
                 <Download className="w-4 h-4" aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={handleClearHistory}
-                className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors"
+                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
                 title="Clear history"
+                aria-label="Clear all history"
               >
                 <Trash2 className="w-4 h-4" aria-hidden="true" />
               </button>
@@ -330,18 +356,28 @@ const InputPanel = () => {
           {importStatus && (
             <div
               role="status"
-              className={`flex items-center gap-2 text-sm font-medium rounded-lg p-3 mb-3 border ${
+              className={`flex items-center justify-between gap-2 text-sm font-medium rounded-lg p-3 mb-3 border ${
                 importStatus.type === 'success'
                   ? 'bg-emerald-900/30 border-emerald-700/50 text-emerald-100'
                   : 'bg-red-900/30 border-red-700/50 text-red-100'
               }`}
             >
-              {importStatus.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
-              ) : (
-                <AlertCircle className="w-4 h-4" aria-hidden="true" />
-              )}
-              <span className="leading-snug">{importStatus.message}</span>
+              <div className="flex items-center gap-2">
+                {importStatus.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                )}
+                <span className="leading-snug">{importStatus.message}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImportStatus(null)}
+                className="p-1 hover:opacity-75 transition-opacity flex-shrink-0"
+                aria-label="Dismiss"
+              >
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
             </div>
           )}
 
@@ -369,31 +405,35 @@ const InputPanel = () => {
               />
             ) : (
               filteredHistory.map((item: HistoryItem) => (
-                <div key={item.id} className="bg-gray-700/30 rounded-lg p-3 hover:bg-gray-700/40 transition-colors">
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                <div key={item.id} className="bg-gray-700/30 rounded-lg p-3 hover:bg-gray-700/40 transition-colors group">
+                  <div className="flex items-start justify-between gap-2">
                     <button
                       type="button"
                       onClick={() => loadFromHistory(item)}
-                      className="text-left flex-1 text-gray-300 text-sm hover:text-primary-300 transition-colors"
+                      className="text-left flex-1 text-gray-300 text-sm hover:text-primary-300 transition-colors min-w-0"
                     >
                       <p className="truncate font-medium">{item.input}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(item.timestamp).toLocaleString()} • {getWordCount(item.input)} words
-                      </p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                        <Clock className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+                        <span>{formatRelativeTime(item.timestamp)}</span>
+                        <span className="text-gray-600">|</span>
+                        <span>{getWordCount(item.input)} words</span>
+                      </div>
                     </button>
-                    <div className="flex gap-1">
+                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         type="button"
                         onClick={() => handleDuplicateItem(item)}
-                        className="p-1.5 text-gray-400 hover:text-primary-300 hover:bg-primary-900/20 rounded transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-primary-300 hover:bg-primary-900/20 rounded-lg transition-colors"
                         title="Duplicate"
+                        aria-label="Duplicate prompt"
                       >
                         <Copy className="w-3.5 h-3.5" aria-hidden="true" />
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteItem(item.id)}
-                        className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
                         aria-label="Delete history item"
                       >
                         <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
@@ -463,15 +503,15 @@ const InputPanel = () => {
           </div>
           <div className="space-y-2">
             {suggestions.map((suggestion: Suggestion, index) => (
-              <div key={index} className="flex items-center justify-between bg-gray-700/30 rounded-lg p-3">
-                <div className="flex items-center text-sm text-gray-300">
-                  <Sparkles className="w-4 h-4 mr-2 text-teal-400" aria-hidden="true" />
-                  <span>{suggestion.text}</span>
+              <div key={index} className="flex items-center justify-between bg-gray-700/30 rounded-lg p-3 hover:bg-gray-700/40 transition-colors">
+                <div className="flex items-center text-sm text-gray-300 min-w-0 mr-3">
+                  <Sparkles className="w-4 h-4 mr-2 text-teal-400 flex-shrink-0" aria-hidden="true" />
+                  <span className="truncate">{suggestion.text}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => applySuggestion(suggestion)}
-                  className="flex items-center gap-1 px-3 py-1 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 rounded-lg text-sm transition-all"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 rounded-lg text-sm font-medium transition-all flex-shrink-0"
                 >
                   <Plus className="w-3 h-3" aria-hidden="true" />
                   Add
@@ -487,7 +527,7 @@ const InputPanel = () => {
           type="button"
           onClick={handleGenerate}
           disabled={!input.trim() || isGenerating || requestsLeft === 0}
-          className="flex-1 bg-gradient-to-r from-teal-600 to-purple-600 text-white py-3 px-6 rounded-xl font-medium hover:from-teal-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          className="flex-1 bg-gradient-to-r from-teal-600 to-purple-600 text-white py-3.5 px-6 rounded-xl font-semibold hover:from-teal-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20"
         >
           {isGenerating ? (
             <>
@@ -504,16 +544,17 @@ const InputPanel = () => {
         <button
           type="button"
           onClick={clearAll}
-          className="px-4 py-3 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-xl transition-all"
+          disabled={!input && !document.querySelector('[aria-label="Enhanced prompt output"] pre')}
+          className="px-5 py-3.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-xl font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Clear
         </button>
       </div>
 
       {isListening && (
-        <div className="mt-3 flex items-center gap-2 text-sm text-red-400" role="status" aria-live="polite">
+        <div className="mt-3 flex items-center gap-2 text-sm text-red-400 bg-red-900/20 border border-red-600/20 rounded-lg p-2.5" role="status" aria-live="polite">
           <Volume2 className="w-4 h-4 animate-pulse" aria-hidden="true" />
-          Listening... speak now
+          <span>Listening... speak now</span>
         </div>
       )}
 
