@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { FILE_READ_TIMEOUT } from '../data/constants';
 
 interface Metadata {
   intent?: string;
@@ -285,7 +286,20 @@ class ContextService {
   importHistory(file: File): Promise<boolean> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
+      let settled = false;
+
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reader.abort();
+          reject(new Error('File read timed out. The file may be too large or the system is unresponsive.'));
+        }
+      }, FILE_READ_TIMEOUT);
+
       reader.onload = (e) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
         try {
           const data = JSON.parse(e.target?.result as string) as ExportData;
 
@@ -311,7 +325,12 @@ class ContextService {
           reject(error);
         }
       };
-      reader.onerror = reject;
+      reader.onerror = (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        reject(error);
+      };
       reader.readAsText(file);
     });
   }

@@ -7,7 +7,9 @@ import {
   REQUEST_LIMIT,
   SILENCE_TIMEOUT,
   TONE_OPTIONS,
-  LENGTH_OPTIONS
+  LENGTH_OPTIONS,
+  GENERATION_TIMEOUT,
+  CLIPBOARD_TIMEOUT
 } from '../data/constants';
 
 interface Suggestion {
@@ -348,55 +350,68 @@ export const PromptProvider: React.FC<PromptProviderProps> = ({ children }) => {
     setCurrentIntent(null);
     setContextInfo(null);
 
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('GENERATION_TIMEOUT')), GENERATION_TIMEOUT);
+    });
+
     try {
-      const intentAnalysis = await llmService.analyzeIntent(input.trim());
-      setCurrentIntent(intentAnalysis);
+      const generate = async () => {
+        const intentAnalysis = await llmService.analyzeIntent(input.trim());
+        setCurrentIntent(intentAnalysis);
 
-      const userPreferences = contextService.getUserPreferences();
-      let context: ContextInfo = { tone: currentTone, length: currentLength } as ContextInfo;
+        const userPreferences = contextService.getUserPreferences();
+        let context: ContextInfo = { tone: currentTone, length: currentLength } as ContextInfo;
 
-      if (userPreferences.enableContext !== false) {
-        const enhancedContext = contextService.getEnhancedContext(input.trim(), intentAnalysis.intent);
-        context = { ...enhancedContext, ...context };
-        setContextInfo(context);
-      }
+        if (userPreferences.enableContext !== false) {
+          const enhancedContext = contextService.getEnhancedContext(input.trim(), intentAnalysis.intent);
+          context = { ...enhancedContext, ...context };
+          setContextInfo(context);
+        }
 
-      const result = await llmService.generateEnhancedPrompt(input.trim(), context);
+        const result = await llmService.generateEnhancedPrompt(input.trim(), context);
 
-      if (result.error) {
-        setOutput(result.error);
-        setLlmStatus('error');
-        setRequestsLeft(result.requestsLeft ?? 0);
+        if (result.error) {
+          setOutput(result.error);
+          setLlmStatus('error');
+          setRequestsLeft(result.requestsLeft ?? 0);
+          setRequestLimit(result.limit ?? REQUEST_LIMIT);
+          return;
+        }
+
+        setRequestsLeft(result.requestsLeft);
         setRequestLimit(result.limit ?? REQUEST_LIMIT);
-        return;
-      }
 
-      setRequestsLeft(result.requestsLeft);
-      setRequestLimit(result.limit ?? REQUEST_LIMIT);
+        if (result.enhanced) {
+          setLlmStatus('enhanced');
+        } else {
+          setLlmStatus('error');
+        }
 
-      if (result.enhanced) {
-        setLlmStatus('enhanced');
-      } else {
-        setLlmStatus('error');
-      }
+        setOutput(result.output || '');
 
-      setOutput(result.output || '');
+        if (userPreferences.autoSave !== false) {
+          contextService.addToHistory(input.trim(), result.output || '', intentAnalysis);
+        }
 
-      if (userPreferences.autoSave !== false) {
-        contextService.addToHistory(input.trim(), result.output || '', intentAnalysis);
-      }
+        const historyItem: HistoryItem = {
+          id: uuidv4(),
+          input: input.trim(),
+          output: result.output || '',
+          timestamp: new Date().toISOString()
+        };
 
-      const historyItem: HistoryItem = {
-        id: uuidv4(),
-        input: input.trim(),
-        output: result.output || '',
-        timestamp: new Date().toISOString()
+        setHistory((prev) => [historyItem, ...prev.slice(0, HISTORY_LIMIT - 1)]);
       };
 
-      setHistory((prev) => [historyItem, ...prev.slice(0, HISTORY_LIMIT - 1)]);
+      await Promise.race([generate(), timeoutPromise]);
     } catch (error) {
       console.error('Generation error:', error);
-      setOutput('AI enhancement service is temporarily unavailable. Please try again in a few moments.');
+      if (error instanceof Error && error.message === 'GENERATION_TIMEOUT') {
+        llmService.cancelRequest();
+        setOutput('The request took too long to complete. Please try again.');
+      } else {
+        setOutput('AI enhancement service is temporarily unavailable. Please try again in a few moments.');
+      }
       setLlmStatus('error');
     } finally {
       setIsGenerating(false);
@@ -407,7 +422,10 @@ export const PromptProvider: React.FC<PromptProviderProps> = ({ children }) => {
     if (!output) return;
 
     try {
-      await navigator.clipboard.writeText(output);
+      const clipboardTimeout = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Clipboard operation timed out')), CLIPBOARD_TIMEOUT);
+      });
+      await Promise.race([navigator.clipboard.writeText(output), clipboardTimeout]);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
