@@ -1,4 +1,5 @@
 import axios, { type AxiosError } from 'axios';
+import { API_TIMEOUT, API_MAX_RETRIES, API_RETRY_BASE_DELAY } from '../data/constants';
 
 interface Context {
   tone?: string;
@@ -28,93 +29,167 @@ interface IntentData {
 
 class LLMService {
   private isAvailable: boolean;
+  private abortController: AbortController | null = null;
 
   constructor() {
     // No need for OpenAI client when using backend proxy
     this.isAvailable = true;
   }
 
+  private isRetryableError(error: AxiosError): boolean {
+    if (error.code === 'ECONNABORTED' || error.code === 'ERR_CANCELED') return true;
+    if (!error.response) return true; // Network error
+    const status = error.response.status;
+    return status === 502 || status === 503 || status === 504;
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  cancelRequest(): void {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+  }
+
   async generateEnhancedPrompt(userInput: string, context: Context = {}): Promise<EnhancedPromptResult> {
-    try {
-      const requestBody = {
-        prompt: userInput,
-        context
-      };
+    // Cancel any in-flight request
+    this.cancelRequest();
+    this.abortController = new AbortController();
 
-      console.log('Sending request for AI enhancement...');
-      const response = await axios.post('/api/generate', requestBody, {
-        timeout: 30000, // 30 second timeout
-        headers: {
-          'Content-Type': 'application/json'
+    const requestBody = {
+      prompt: userInput,
+      context
+    };
+
+    let lastError: AxiosError | null = null;
+
+    for (let attempt = 0; attempt <= API_MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) {
+          const backoffDelay = API_RETRY_BASE_DELAY * Math.pow(2, attempt - 1);
+          console.log(`Retry attempt ${attempt}/${API_MAX_RETRIES} after ${backoffDelay}ms...`);
+          await this.delay(backoffDelay);
         }
-      });
 
-      console.log('API Response received:', {
-        enhanced: response.data.enhanced,
-        hasResult: !!response.data.result,
-        requestsLeft: response.data.requestsLeft
-      });
+        console.log('Sending request for AI enhancement...');
+        const response = await axios.post('/api/generate', requestBody, {
+          timeout: API_TIMEOUT,
+          signal: this.abortController.signal,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
 
-      return {
-        output: response.data.result,
-        requestsLeft: response.data.requestsLeft,
-        limit: response.data.limit,
-        enhanced: response.data.enhanced,
-        error: null
-      };
-    } catch (error) {
-      console.error('API Error:', error);
-      const axiosError = error as AxiosError<any>;
+        console.log('API Response received:', {
+          enhanced: response.data.enhanced,
+          hasResult: !!response.data.result,
+          requestsLeft: response.data.requestsLeft
+        });
 
-      if (axiosError.response && axiosError.response.status === 429) {
         return {
-          output: null,
-          requestsLeft: axiosError.response.data.requestsLeft,
-          limit: axiosError.response.data.limit,
-          error: axiosError.response.data.error || 'Monthly free request limit reached.'
+          output: response.data.result,
+          requestsLeft: response.data.requestsLeft,
+          limit: response.data.limit,
+          enhanced: response.data.enhanced,
+          error: null
         };
-      }
+      } catch (error) {
+        const axiosError = error as AxiosError<any>;
 
-      if (axiosError.response && (axiosError.response.status === 500 || axiosError.response.status === 503)) {
-        const errorMessage = axiosError.response?.data?.error || 'Service temporarily unavailable';
-        console.error('Server error details:', axiosError.response.data);
-        return {
-          output: null,
-          requestsLeft: axiosError.response.data?.requestsLeft ?? null,
-          limit: axiosError.response.data?.limit ?? null,
-          error: errorMessage || 'Service temporarily unavailable. Please try again in a moment.'
-        };
-      }
+        // Don't retry if the request was intentionally cancelled
+        if (axiosError.code === 'ERR_CANCELED' && this.abortController?.signal.aborted) {
+          return {
+            output: null,
+            requestsLeft: null,
+            limit: null,
+            error: 'Request was cancelled.'
+          };
+        }
 
-      if (axiosError.response && axiosError.response.status === 404) {
-        const errorMessage = axiosError.response?.data?.error || 'Model not found';
-        console.error('Model not found error:', axiosError.response.data);
-        return {
-          output: null,
-          requestsLeft: axiosError.response.data?.requestsLeft ?? null,
-          limit: axiosError.response.data?.limit ?? null,
-          error: errorMessage
-        };
-      }
+        lastError = axiosError;
 
-      if (axiosError.response && axiosError.response.status === 400) {
-        const errorMessage = axiosError.response?.data?.error || 'Invalid request';
-        console.error('Invalid request error:', axiosError.response.data);
-        return {
-          output: null,
-          requestsLeft: axiosError.response.data?.requestsLeft ?? null,
-          limit: axiosError.response.data?.limit ?? null,
-          error: errorMessage
-        };
-      }
+        // Only retry on retryable errors and if we have attempts left
+        if (attempt < API_MAX_RETRIES && this.isRetryableError(axiosError)) {
+          continue;
+        }
 
+        break;
+      }
+    }
+
+    // All retries exhausted or non-retryable error
+    console.error('API Error:', lastError);
+    const axiosError = lastError!;
+
+    if (axiosError.code === 'ECONNABORTED') {
       return {
         output: null,
         requestsLeft: null,
         limit: null,
-        error: axiosError.response?.data?.error || axiosError.message || 'Connection error. Please try again.'
+        error: 'Request timed out. The server took too long to respond. Please try again.'
       };
     }
+
+    if (!axiosError.response) {
+      return {
+        output: null,
+        requestsLeft: null,
+        limit: null,
+        error: 'Network error. Please check your connection and try again.'
+      };
+    }
+
+    if (axiosError.response.status === 429) {
+      return {
+        output: null,
+        requestsLeft: axiosError.response.data.requestsLeft,
+        limit: axiosError.response.data.limit,
+        error: axiosError.response.data.error || 'Monthly free request limit reached.'
+      };
+    }
+
+    if (axiosError.response.status === 500 || axiosError.response.status === 503) {
+      const errorMessage = axiosError.response?.data?.error || 'Service temporarily unavailable';
+      console.error('Server error details:', axiosError.response.data);
+      return {
+        output: null,
+        requestsLeft: axiosError.response.data?.requestsLeft ?? null,
+        limit: axiosError.response.data?.limit ?? null,
+        error: errorMessage || 'Service temporarily unavailable. Please try again in a moment.'
+      };
+    }
+
+    if (axiosError.response.status === 404) {
+      const errorMessage = axiosError.response?.data?.error || 'Model not found';
+      console.error('Model not found error:', axiosError.response.data);
+      return {
+        output: null,
+        requestsLeft: axiosError.response.data?.requestsLeft ?? null,
+        limit: axiosError.response.data?.limit ?? null,
+        error: errorMessage
+      };
+    }
+
+    if (axiosError.response.status === 400) {
+      const errorMessage = axiosError.response?.data?.error || 'Invalid request';
+      console.error('Invalid request error:', axiosError.response.data);
+      return {
+        output: null,
+        requestsLeft: axiosError.response.data?.requestsLeft ?? null,
+        limit: axiosError.response.data?.limit ?? null,
+        error: errorMessage
+      };
+    }
+
+    return {
+      output: null,
+      requestsLeft: null,
+      limit: null,
+      error: axiosError.response?.data?.error || axiosError.message || 'Connection error. Please try again.'
+    };
   }
 
   // Simple client-side intent analysis for context enrichment

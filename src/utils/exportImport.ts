@@ -3,6 +3,7 @@
  */
 
 import type { HistoryItem } from '../context/PromptContext.d';
+import { FILE_READ_TIMEOUT } from '../data/constants';
 
 export interface ExportData {
   version: string;
@@ -64,8 +65,20 @@ const sanitizeString = (value: unknown, maxLength = 50000): string => {
 export const importFromJSON = (file: File): Promise<ExportData> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    let settled = false;
+
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reader.abort();
+        reject(new Error('File read timed out. The file may be too large or the system is unresponsive.'));
+      }
+    }, FILE_READ_TIMEOUT);
 
     reader.onload = (event) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
       try {
         const data = JSON.parse(event.target?.result as string);
 
@@ -92,6 +105,9 @@ export const importFromJSON = (file: File): Promise<ExportData> => {
     };
 
     reader.onerror = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
       reject(new Error('Failed to read file'));
     };
 
