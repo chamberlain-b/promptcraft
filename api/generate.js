@@ -215,8 +215,9 @@ function validateEnhancedOutput(output, input, context = {}) {
   
   // Check 11: Should not be just copying the input (check for substantial enhancement)
   const inputWords = input.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const exactCopies = inputWords.filter(word => {
-    const wordRegex = new RegExp(`\\b${word}\\b`, 'i');
+    const wordRegex = new RegExp(`\\b${escapeRegex(word)}\\b`, 'i');
     return wordRegex.test(output);
   });
   const copyRatio = exactCopies.length / Math.max(inputWords.length, 1);
@@ -346,8 +347,18 @@ VALIDATION (verify before output):
 </output>`;
 
 export default async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Enable CORS with origin allowlist
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
+  const origin = req.headers.origin;
+  if (allowedOrigins.length > 0 && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (allowedOrigins.length === 0) {
+    // Fallback: allow same-origin requests only (no origin header means same-origin)
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+  }
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-API-Key');
 
@@ -375,11 +386,18 @@ export default async function handler(req, res) {
 
   try {
     const { prompt, context } = req.body;
-    console.log('User input received:', prompt);
-    console.log('Environment API Key:', process.env.OPENAI_API_KEY ? 'Yes' : 'No');
+    console.log('Request received, prompt length:', prompt?.length ?? 0);
     
-    if (!prompt) {
-      throw new Error('No prompt provided in request body.');
+    if (!prompt || typeof prompt !== 'string') {
+      const err = new Error('No prompt provided in request body.');
+      err.status = 400;
+      throw err;
+    }
+
+    if (prompt.length > 10000) {
+      const err = new Error('Prompt exceeds maximum length of 10,000 characters.');
+      err.status = 400;
+      throw err;
     }
 
     let result;
@@ -391,9 +409,6 @@ export default async function handler(req, res) {
 
     const effectiveApiKey = process.env.OPENAI_API_KEY || headerApiKey;
     const apiKeySource = process.env.OPENAI_API_KEY ? 'environment' : headerApiKey ? 'header' : null;
-    console.log('Effective API Key available:', effectiveApiKey ? 'Yes' : 'No');
-    console.log('API Key source:', apiKeySource || 'none');
-    console.log('API Key format check:', effectiveApiKey ? (effectiveApiKey.startsWith('sk-') ? 'Valid format (starts with sk-)' : 'Warning: API key does not start with sk-') : 'No key');
 
     if (apiKeySource === 'header' && (!effectiveApiKey || !effectiveApiKey.startsWith('sk-'))) {
       const invalidKeyError = new Error('Invalid API key format provided in X-API-Key header.');
@@ -441,15 +456,7 @@ length_spec: ${lengthSpec}
 
 Transform the request above into a structured prompt. Apply tone "${tone}" across all sections. Calibrate depth and word targets to "${length}" (${lengthSpec}). Output only the 9 required XML sections: role, context, task, constraints, reasoning, examples, output_format, success_criteria, guidelines.`;
 
-        console.log('Attempting OpenAI API call with model: gpt-5.2');
-        console.log('API Config:', {
-          model: 'gpt-5.2',
-          reasoning_effort: reasoningEffort,
-          max_tokens: 3000,
-          temperature: 0.4,
-          system_message_length: ENHANCED_PROMPT_SYSTEM.length,
-          user_message_length: userMessage.length
-        });
+        console.log('Attempting OpenAI API call, reasoning_effort:', reasoningEffort);
 
         let completion;
         // GPT-5.2 config: lower temperature for disciplined output,

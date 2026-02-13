@@ -21,14 +21,21 @@ function cleanupOldEntries() {
 }
 
 /**
- * Get unique identifier for the request
+ * Get unique identifier for the request.
+ * Only trusts proxy headers (x-forwarded-for, x-real-ip) when running in
+ * known reverse-proxy environments (Vercel, TRUST_PROXY=1).
  * @param {Object} req - Request object
  * @returns {string} Unique identifier
  */
 function getIdentifier(req) {
-  // Get IP address from various possible headers (Vercel provides x-forwarded-for)
-  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim()
-    || req.headers['x-real-ip']
+  const behindTrustedProxy = process.env.VERCEL === '1' || process.env.TRUST_PROXY === '1';
+
+  let ip;
+  if (behindTrustedProxy) {
+    ip = req.headers['x-forwarded-for']?.split(',')[0].trim()
+      || req.headers['x-real-ip'];
+  }
+  ip = ip
     || req.connection?.remoteAddress
     || req.socket?.remoteAddress
     || 'unknown';
