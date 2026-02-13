@@ -289,13 +289,19 @@ class ContextService {
         try {
           const data = JSON.parse(e.target?.result as string) as ExportData;
 
-          if (data.conversationHistory) {
-            this.conversationHistory = data.conversationHistory;
+          if (data.conversationHistory && Array.isArray(data.conversationHistory)) {
+            // Validate each item has required string fields
+            const valid = data.conversationHistory.every(
+              (item) => typeof item.id === 'string' && typeof item.input === 'string' && typeof item.output === 'string'
+            );
+            if (valid) {
+              this.conversationHistory = data.conversationHistory.slice(0, 50);
+            }
           }
-          if (data.userPreferences) {
+          if (data.userPreferences && typeof data.userPreferences === 'object' && !Array.isArray(data.userPreferences)) {
             this.userPreferences = data.userPreferences;
           }
-          if (data.sessionContext) {
+          if (data.sessionContext && typeof data.sessionContext === 'object' && !Array.isArray(data.sessionContext)) {
             this.sessionContext = data.sessionContext;
           }
 

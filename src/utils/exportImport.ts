@@ -52,6 +52,15 @@ export const exportToCSV = (data: HistoryItem[], filename = 'prompt-craft-export
   URL.revokeObjectURL(url);
 };
 
+/**
+ * Sanitize a string by stripping HTML tags and trimming excessive length.
+ * Prevents stored XSS if rendering behavior changes in the future.
+ */
+const sanitizeString = (value: unknown, maxLength = 50000): string => {
+  if (typeof value !== 'string') return '';
+  return value.replace(/<[^>]*>/g, '').slice(0, maxLength);
+};
+
 export const importFromJSON = (file: File): Promise<ExportData> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -65,11 +74,15 @@ export const importFromJSON = (file: File): Promise<ExportData> => {
           throw new Error('Invalid file format');
         }
 
-        // Validate each prompt item
+        // Validate and sanitize each prompt item
         for (const prompt of data.prompts) {
           if (!prompt.id || !prompt.input || !prompt.output || !prompt.timestamp) {
             throw new Error('Invalid prompt data structure');
           }
+          prompt.id = sanitizeString(prompt.id, 200);
+          prompt.input = sanitizeString(prompt.input);
+          prompt.output = sanitizeString(prompt.output);
+          prompt.timestamp = sanitizeString(prompt.timestamp, 100);
         }
 
         resolve(data);
