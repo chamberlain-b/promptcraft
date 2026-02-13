@@ -1,4 +1,5 @@
 import { type FC, useState } from 'react';
+import { ChevronDown, ChevronUp, AlertTriangle, Settings as SettingsIcon, Keyboard } from 'lucide-react';
 import Header from './Header';
 import InputPanel from './InputPanel';
 import OutputPanel from './OutputPanel';
@@ -17,10 +18,10 @@ const AppLayout: FC = () => {
     actions: { setShowSettings, checkLlmStatus, generatePrompt, clearAll, copyToClipboard }
   } = usePrompt();
 
-  const { toasts, removeToast, success, error } = useToast();
+  const { toasts, removeToast, success } = useToast();
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showNotice, setShowNotice] = useState(false);
 
-  // Define keyboard shortcuts
   const shortcuts: KeyboardShortcut[] = [
     {
       key: 'Enter',
@@ -77,77 +78,72 @@ const AppLayout: FC = () => {
         </div>
         <ExamplesSection />
         <div className="text-center mt-8">
-          <p className="text-gray-400">
-            Boost your AI interactions with better prompts ✨ Perfect for ChatGPT, Claude, and more!
+          <p className="text-gray-400 text-sm">
+            Boost your AI interactions with better prompts. Perfect for ChatGPT, Claude, and more!
           </p>
-          <button
-            type="button"
-            onClick={() => setShowShortcuts(true)}
-            className="mt-4 text-sm text-gray-500 hover:text-gray-400 transition-colors"
-          >
-            Press <kbd className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs font-mono">?</kbd> for keyboard shortcuts
-          </button>
+          <div className="flex items-center justify-center gap-4 mt-4">
+            <button
+              type="button"
+              onClick={() => setShowShortcuts(true)}
+              className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-400 transition-colors"
+            >
+              <Keyboard className="w-3.5 h-3.5" aria-hidden="true" />
+              Press <kbd className="px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded text-xs font-mono">?</kbd> for shortcuts
+            </button>
+          </div>
         </div>
       </div>
-      <footer className="mt-16 pt-8 border-t border-gray-700/30">
-        <div className="max-w-4xl mx-auto text-center space-y-4">
-          <div className="bg-amber-900/20 border border-amber-600/30 rounded-2xl p-4 mb-6">
-            <h4 className="text-amber-400 font-semibold mb-2 flex items-center justify-center gap-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                <path d="M12 9v4" />
-                <path d="M12 17h.01" />
-              </svg>
-              Important Notice
-            </h4>
-            <p className="text-amber-200 text-sm leading-relaxed">
-              By using this service, you acknowledge that your inputs may be processed by third-party AI services and could potentially be used for training purposes.
-              Please avoid submitting sensitive, confidential, or personal information. Use this tool responsibly and in accordance with your organization's data policies.
-            </p>
+
+      <footer className="mt-12 border-t border-gray-700/30">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          {/* Collapsible Notice */}
+          <div className="mb-4">
+            <button
+              type="button"
+              onClick={() => setShowNotice(!showNotice)}
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-amber-900/10 hover:bg-amber-900/20 border border-amber-600/20 rounded-xl text-sm text-amber-400 transition-colors"
+              aria-expanded={showNotice}
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+                <span className="font-medium">Important Notice</span>
+              </div>
+              {showNotice ? (
+                <ChevronUp className="w-4 h-4" aria-hidden="true" />
+              ) : (
+                <ChevronDown className="w-4 h-4" aria-hidden="true" />
+              )}
+            </button>
+            {showNotice && (
+              <div className="mt-2 px-4 py-3 bg-amber-900/10 border border-amber-600/20 border-t-0 rounded-b-xl">
+                <p className="text-amber-200/80 text-sm leading-relaxed">
+                  By using this service, you acknowledge that your inputs may be processed by third-party AI services and could potentially be used for training purposes.
+                  Please avoid submitting sensitive, confidential, or personal information. Use this tool responsibly and in accordance with your organization's data policies.
+                </p>
+              </div>
+            )}
           </div>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-sm text-gray-400">
-            <span>© 2025 Prompt Craft</span>
-            <span className="hidden sm:inline">•</span>
+
+          {/* Footer Links */}
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-3 text-sm text-gray-500">
+            <span>&copy; {new Date().getFullYear()} Prompt Craft</span>
+            <span className="hidden sm:inline text-gray-700">&middot;</span>
             <button
               type="button"
               onClick={() => setShowSettings(true)}
-              className="hover:text-gray-300 transition-colors underline"
+              className="inline-flex items-center gap-1.5 hover:text-gray-400 transition-colors"
             >
+              <SettingsIcon className="w-3.5 h-3.5" aria-hidden="true" />
               Privacy Settings
             </button>
-            <span className="hidden sm:inline">•</span>
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-gray-300 transition-colors underline"
-            >
-              Open Source
-            </a>
           </div>
-          <div className="text-xs text-gray-500 leading-relaxed max-w-2xl mx-auto">
-            <p className="mb-2">
-              This tool is provided "as is" without warranty of any kind. Results may vary and should be reviewed before use.
-              No liability is assumed for the use of generated content.
-            </p>
-            <p>
-              For educational and personal use. Please respect intellectual property rights and follow applicable laws and regulations.
-            </p>
-          </div>
+
+          <p className="text-xs text-gray-600 text-center mt-3 max-w-xl mx-auto leading-relaxed">
+            Provided "as is" without warranty. Results should be reviewed before use. For educational and personal use.
+          </p>
         </div>
       </footer>
-      
+
       <Settings
         isOpen={showSettings}
         onClose={() => {
@@ -155,13 +151,13 @@ const AppLayout: FC = () => {
           checkLlmStatus();
         }}
       />
-      
+
       <KeyboardShortcutsDialog
         isOpen={showShortcuts}
         onClose={() => setShowShortcuts(false)}
         shortcuts={shortcuts}
       />
-      
+
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
