@@ -10,7 +10,7 @@ const LoadingSkeleton: FC<LoadingSkeletonProps> = ({ lines = 4 }) => {
       {Array.from({ length: lines }).map((_, index) => (
         <div
           key={index}
-          className="h-4 bg-gray-700/60 rounded"
+          className="h-4 rounded bg-white/[0.07]"
           style={{ width: `${85 - index * 10}%` }}
         />
       ))}

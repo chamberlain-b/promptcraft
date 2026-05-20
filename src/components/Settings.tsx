@@ -24,16 +24,16 @@ const ToggleSwitch: FC<{ checked: boolean; onChange: (checked: boolean) => void;
 }) => (
   <label className="flex items-center justify-between py-2 cursor-pointer group">
     <div className="flex-1 mr-4">
-      <span className="text-sm font-medium text-gray-200 group-hover:text-gray-100 transition-colors">{label}</span>
-      {description && <p className="text-xs text-gray-400 mt-0.5">{description}</p>}
+      <span className="text-sm font-medium text-slate-200 group-hover:text-white transition-colors">{label}</span>
+      {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
     </div>
     <button
       type="button"
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-400/50 focus:ring-offset-2 focus:ring-offset-gray-900 ${
-        checked ? 'bg-teal-500' : 'bg-gray-600'
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-300/40 focus:ring-offset-2 focus:ring-offset-[#080c10] ${
+        checked ? 'bg-teal-400' : 'bg-slate-700'
       }`}
     >
       <span
@@ -155,28 +155,28 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       role="presentation"
       onClick={onClose}
     >
       <div
         ref={dialogRef}
-        className="bg-gray-900 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-700/80 shadow-2xl custom-scrollbar"
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg border border-white/[0.08] bg-[#0a1015] shadow-[0_30px_120px_rgba(0,0,0,0.55)] custom-scrollbar"
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-heading"
         aria-describedby="settings-description"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="sticky top-0 bg-gray-900 border-b border-gray-700/50 px-6 py-4 z-10">
+        <div className="sticky top-0 bg-[#0a1015]/95 backdrop-blur-xl border-b border-white/[0.08] px-6 py-4 z-10">
           <div className="flex items-center justify-between">
-            <h2 id="settings-heading" className="text-xl font-bold flex items-center gap-2 text-gray-100">
-              <SettingsIcon className="w-5 h-5 text-teal-400" aria-hidden="true" />
+            <h2 id="settings-heading" className="text-xl font-semibold flex items-center gap-2 text-white">
+              <SettingsIcon className="w-5 h-5 text-teal-300" aria-hidden="true" />
               Settings
             </h2>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-white hover:bg-white/[0.06] rounded-lg transition-colors"
               aria-label="Close settings"
             >
               <X className="w-5 h-5" aria-hidden="true" />
@@ -194,8 +194,8 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
               role="status"
               className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 ${
                 message.includes('Error')
-                  ? 'bg-red-900/40 text-red-300 border border-red-700/50'
-                  : 'bg-teal-900/40 text-teal-300 border border-teal-700/50'
+                  ? 'bg-red-300/[0.08] text-red-100 border border-red-300/20'
+                  : 'bg-teal-300/[0.08] text-teal-100 border border-teal-300/20'
               }`}
             >
               {message}
@@ -204,17 +204,17 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
 
           {/* User Preferences */}
           <div>
-            <h3 className="text-base font-semibold mb-3 flex items-center gap-2 text-teal-300">
+            <h3 className="text-base font-semibold mb-3 flex items-center gap-2 text-teal-100">
               <User className="w-4 h-4" aria-hidden="true" />
               User Preferences
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-gray-200">Default Tone</label>
+                <label className="block text-sm font-medium mb-1.5 text-slate-200">Default Tone</label>
                 <select
                   value={preferences.defaultTone}
                   onChange={(e) => setPreferences(prev => ({ ...prev, defaultTone: e.target.value }))}
-                  className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                  className="select-field w-full"
                 >
                   <option value="professional">Professional</option>
                   <option value="casual">Casual</option>
@@ -226,11 +226,11 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5 text-gray-200">Default Length</label>
+                <label className="block text-sm font-medium mb-1.5 text-slate-200">Default Length</label>
                 <select
                   value={preferences.defaultLength}
                   onChange={(e) => setPreferences(prev => ({ ...prev, defaultLength: e.target.value }))}
-                  className="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                  className="select-field w-full"
                 >
                   <option value="short">Short</option>
                   <option value="medium">Medium</option>
@@ -243,8 +243,8 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
 
           {/* Feature Toggles */}
           <div>
-            <h3 className="text-base font-semibold mb-2 text-teal-300">Feature Settings</h3>
-            <div className="space-y-1 bg-gray-800/40 rounded-lg p-3 border border-gray-700/30">
+            <h3 className="text-base font-semibold mb-2 text-teal-100">Feature Settings</h3>
+            <div className="space-y-1 rounded-lg border border-white/[0.08] bg-white/[0.04] p-3">
               <ToggleSwitch
                 checked={preferences.enableContext}
                 onChange={(checked) => setPreferences(prev => ({ ...prev, enableContext: checked }))}
@@ -268,16 +268,16 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
 
           {/* Data Management */}
           <div>
-            <h3 className="text-base font-semibold mb-3 text-teal-300">Data Management</h3>
+            <h3 className="text-base font-semibold mb-3 text-teal-100">Data Management</h3>
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={handleExportData}
-                className="px-4 py-2.5 bg-teal-400/20 backdrop-blur-md border border-teal-400/40 text-white rounded-xl font-medium text-sm flex items-center gap-2 shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-teal-400/60 hover:bg-teal-400/30 hover:border-teal-300/80"
+                className="px-4 py-2.5 bg-teal-300/[0.08] backdrop-blur-md border border-teal-300/20 text-teal-100 rounded-lg font-medium text-sm flex items-center gap-2 transition-all focus:outline-none focus:ring-2 focus:ring-teal-300/30 hover:bg-teal-300/[0.12] hover:border-teal-300/40"
               >
                 <Download className="w-4 h-4" aria-hidden="true" />
                 Export Data
               </button>
-              <label className="px-4 py-2.5 bg-blue-400/20 backdrop-blur-md border border-blue-400/40 text-white rounded-xl font-medium text-sm flex items-center gap-2 cursor-pointer shadow-lg transition-all focus-within:ring-2 focus-within:ring-blue-400/60 hover:bg-blue-400/30 hover:border-blue-300/80">
+              <label className="px-4 py-2.5 bg-blue-300/[0.08] backdrop-blur-md border border-blue-300/20 text-blue-100 rounded-lg font-medium text-sm flex items-center gap-2 cursor-pointer transition-all focus-within:ring-2 focus-within:ring-blue-300/30 hover:bg-blue-300/[0.12] hover:border-blue-300/40">
                 <Upload className="w-4 h-4" aria-hidden="true" />
                 Import Data
                 <input
@@ -290,7 +290,7 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
               <button
                 onClick={handleClearData}
                 aria-label="Reset all saved data"
-                className="px-4 py-2.5 bg-red-400/20 backdrop-blur-md border border-red-400/40 text-white rounded-xl font-medium text-sm flex items-center gap-2 shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-red-400/60 hover:bg-red-400/30 hover:border-red-300/80"
+                className="px-4 py-2.5 bg-red-300/[0.08] backdrop-blur-md border border-red-300/20 text-red-100 rounded-lg font-medium text-sm flex items-center gap-2 transition-all focus:outline-none focus:ring-2 focus:ring-red-300/30 hover:bg-red-300/[0.12] hover:border-red-300/40"
               >
                 <Trash2 className="w-4 h-4" aria-hidden="true" />
                 Reset All Data
@@ -300,18 +300,18 @@ const Settings: FC<SettingsProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Sticky Action Buttons */}
-        <div className="sticky bottom-0 bg-gray-900 border-t border-gray-700/50 px-6 py-4">
+        <div className="sticky bottom-0 bg-[#0a1015]/95 backdrop-blur-xl border-t border-white/[0.08] px-6 py-4">
           <div className="flex justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl font-medium border border-gray-700 flex items-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400/40"
+              className="px-5 py-2.5 bg-white/[0.04] hover:bg-white/[0.07] text-slate-200 rounded-lg font-medium border border-white/[0.08] flex items-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-white/20"
             >
               Cancel
             </button>
             <button
               onClick={handleSaveSettings}
               disabled={isSaving}
-              className="px-5 py-2.5 bg-teal-700 hover:bg-teal-600 text-white rounded-xl font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-teal-400/50"
+              className="px-5 py-2.5 bg-teal-400 hover:bg-teal-300 text-[#06100f] rounded-lg font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-teal-300/40"
             >
               <Save className="w-4 h-4" aria-hidden="true" />
               {isSaving ? 'Saving...' : 'Save Settings'}

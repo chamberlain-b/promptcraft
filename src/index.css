@@ -4,29 +4,144 @@
 
 @layer base {
   :root {
-    --color-background: #0f172a;
-    --color-surface: rgba(17, 24, 39, 0.8);
-    --color-surface-strong: rgba(15, 23, 42, 0.9);
-    --color-panel: rgba(31, 41, 55, 0.5);
-    --color-panel-strong: rgba(55, 65, 81, 0.6);
-    --border-soft: rgba(55, 65, 81, 0.5);
-    --border-strong: rgba(75, 85, 99, 0.6);
+    --color-background: #080c10;
+    --color-surface: rgba(13, 19, 24, 0.9);
+    --color-surface-strong: rgba(8, 12, 16, 0.94);
+    --color-panel: rgba(255, 255, 255, 0.045);
+    --color-panel-strong: rgba(255, 255, 255, 0.07);
+    --border-soft: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.12);
     --blur-surface: 18px;
-    --radius-card: 1.5rem;
-    --radius-panel: 1rem;
+    --radius-card: 0.5rem;
+    --radius-panel: 0.5rem;
     --card-min-height: 50rem;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
     background-color: var(--color-background);
+    color: #f8fafc;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-rendering: geometricPrecision;
+  }
+
+  body::before {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: "";
+    background:
+      linear-gradient(135deg, rgba(20, 184, 166, 0.08), transparent 28%),
+      linear-gradient(225deg, rgba(255, 122, 104, 0.06), transparent 26%),
+      linear-gradient(180deg, #0a1015 0%, #080c10 46%, #06090c 100%);
   }
 
   * {
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  ::selection {
+    background: rgba(45, 212, 191, 0.26);
+    color: #ffffff;
+  }
 }
 
 @layer components {
+  .app-chrome {
+    min-height: 100vh;
+    display: flex;
+  }
+
+  .workbench-panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-card);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025)),
+      rgba(10, 16, 21, 0.9);
+    box-shadow: 0 24px 90px rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(var(--blur-surface));
+  }
+
+  .panel-kicker,
+  .rail-label {
+    color: rgb(100 116 139);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .field-label {
+    color: rgb(148 163 184);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .select-field {
+    min-width: 0;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    background-color: rgba(0, 0, 0, 0.22);
+    padding: 0.7rem 0.8rem;
+    color: rgb(241 245 249);
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  .select-field:hover {
+    border-color: rgba(45, 212, 191, 0.3);
+  }
+
+  .select-field option {
+    background-color: #0a1015;
+    color: #f8fafc;
+  }
+
+  .icon-text-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    border-width: 1px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .rail-nav-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 0.5rem;
+    padding: 0.8rem 0.75rem;
+    color: rgb(203 213 225);
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-align: left;
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .rail-nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.045);
+    color: #ffffff;
+  }
+
+  .rail-nav-item--active {
+    border-left: 3px solid rgb(45 212 191);
+    background-color: rgba(255, 255, 255, 0.065);
+    color: #ffffff;
+  }
+
   .surface-card {
     background-color: var(--color-surface);
     backdrop-filter: blur(var(--blur-surface));
@@ -74,7 +189,7 @@
   }
 
   button:focus-visible {
-    outline: 2px solid rgba(45, 212, 191, 0.5);
+    outline: 2px solid rgba(45, 212, 191, 0.6);
     outline-offset: 2px;
   }
 
@@ -106,7 +221,7 @@
   textarea:focus,
   select:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
+    box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.11);
   }
 
   /* Link hover effects */
@@ -121,17 +236,17 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(55, 65, 81, 0.3);
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.5);
+  background: rgba(148, 163, 184, 0.28);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.7);
+  background: rgba(148, 163, 184, 0.42);
 }
 
 /* Tailwind scrollbar utilities */
@@ -161,17 +276,17 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(55, 65, 81, 0.3);
+  background: rgba(255, 255, 255, 0.035);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(75, 85, 99, 0.6);
+  background: rgba(148, 163, 184, 0.24);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(75, 85, 99, 0.8);
+  background: rgba(148, 163, 184, 0.38);
 }
 
 /* Text overflow and word wrapping fixes */

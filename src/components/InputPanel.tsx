@@ -38,6 +38,7 @@ const InputPanel = () => {
   const {
     state: {
       input,
+      output,
       isGenerating,
       showHistory,
       history,
@@ -196,27 +197,49 @@ const InputPanel = () => {
   );
 
   const wordCount = getWordCount(input);
+  const showPrimaryGenerate = !!input.trim() && requestsLeft !== 0;
+  const isGenerateDisabled = !input.trim() || isGenerating || requestsLeft === 0;
 
   return (
     <section
       aria-label="Prompt input"
-      className="surface-card p-8 flex flex-col min-h-[32rem] md:min-h-card card-container"
+      className="workbench-panel flex min-h-[36rem] flex-col p-4 sm:p-5 lg:min-h-[44rem]"
     >
-      <h3 className="text-xl font-semibold text-gray-100 mb-4 flex items-center gap-2">
-        <Sparkles className="w-5 h-5 text-teal-400" aria-hidden="true" />
-        Your Idea
-      </h3>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="panel-kicker">Composer</p>
+          <h3 className="mt-1 flex items-center gap-2 text-lg font-semibold tracking-[-0.01em] text-white">
+            <Sparkles className="w-5 h-5 text-teal-300" aria-hidden="true" />
+            Your Idea
+          </h3>
+        </div>
+        {recordingSupported && (
+          <button
+            type="button"
+            onClick={toggleVoiceRecording}
+            className={`icon-text-button ${
+              isListening
+                ? 'border-[#ff7a68]/40 bg-[#ff7a68]/15 text-[#ffd8d2]'
+                : 'border-teal-300/20 bg-teal-300/[0.07] text-teal-100 hover:border-teal-300/40'
+            }`}
+            title={isListening ? 'Stop recording' : 'Start voice recording'}
+            aria-pressed={isListening}
+            aria-label={isListening ? 'Stop voice recording' : 'Start voice recording'}
+          >
+            {isListening ? <MicOff className="w-4 h-4" aria-hidden="true" /> : <Mic className="w-4 h-4" aria-hidden="true" />}
+            <span>Voice</span>
+          </button>
+        )}
+      </div>
 
-      <div className="mb-4 surface-panel p-3">
-        <div className="flex flex-col sm:flex-row sm:flex-nowrap sm:items-center gap-2 sm:gap-x-4">
-          <span className="text-base font-bold text-gray-300 whitespace-nowrap">Output Style:</span>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-x-4">
-            <label className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-200 whitespace-nowrap">Tone</span>
+      <div className="mb-4 rounded-lg border border-white/[0.08] bg-black/15 p-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5">
+              <span className="field-label">Tone</span>
               <select
                 value={currentTone}
                 onChange={(event) => setCurrentTone(event.target.value)}
-                className="flex-1 sm:flex-initial px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-transparent transition-all min-w-0"
+                className="select-field"
               >
                 {TONE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -225,12 +248,12 @@ const InputPanel = () => {
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-200 whitespace-nowrap">Length</span>
+            <label className="flex flex-col gap-1.5">
+              <span className="field-label">Length</span>
               <select
                 value={currentLength}
                 onChange={(event) => setCurrentLength(event.target.value)}
-                className="flex-1 sm:flex-initial px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-transparent transition-all min-w-0"
+                className="select-field"
               >
                 {LENGTH_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -239,17 +262,16 @@ const InputPanel = () => {
                 ))}
               </select>
             </label>
-          </div>
         </div>
       </div>
 
       {contextInfo && (
-        <div className="mb-4 surface-panel--strong p-4 border border-blue-600/30">
+        <div className="mb-4 rounded-lg border border-blue-300/20 bg-blue-300/[0.06] p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Brain className="w-4 h-4 text-blue-400" aria-hidden="true" />
-            <h4 className="text-sm font-medium text-blue-300">Context Detected</h4>
+            <Brain className="w-4 h-4 text-blue-200" aria-hidden="true" />
+            <h4 className="text-sm font-medium text-blue-100">Context Detected</h4>
           </div>
-          <div className="text-sm text-blue-200">
+          <div className="text-sm text-blue-100/80">
             <p>Intent: <span className="font-medium capitalize">{currentIntent?.intent}</span></p>
             <p>Confidence: <span className="font-medium">{Math.round((currentIntent?.confidence ?? 0) * 100)}%</span></p>
             {contextInfo.recentHistory?.length > 0 && (
@@ -259,15 +281,15 @@ const InputPanel = () => {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between xl:hidden">
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setShowHistory(!showHistory)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
               showHistory
-                ? 'bg-teal-500/30 text-teal-300'
-                : 'bg-gray-700/50 text-gray-400 hover:bg-gray-600/50 hover:text-gray-300'
+                ? 'bg-teal-300/[0.12] text-teal-100'
+                : 'bg-white/[0.05] text-slate-400 hover:bg-white/[0.08] hover:text-slate-200'
             }`}
             title={showHistory ? 'Hide history' : 'Show history'}
             aria-pressed={showHistory}
@@ -278,55 +300,29 @@ const InputPanel = () => {
             <span className="hidden sm:inline">History</span>
             {history.length > 0 && (
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                showHistory ? 'bg-teal-500/40 text-teal-200' : 'bg-gray-600/60 text-gray-300'
+                showHistory ? 'bg-teal-300/20 text-teal-100' : 'bg-white/[0.08] text-slate-300'
               }`}>
                 {history.length}
               </span>
             )}
           </button>
         </div>
-        {recordingSupported && (
-          <button
-            type="button"
-            onClick={toggleVoiceRecording}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              isListening
-                ? 'bg-red-500 text-white animate-pulse'
-                : 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
-            }`}
-            title={isListening ? 'Stop recording' : 'Start voice recording'}
-            aria-pressed={isListening}
-            aria-label={isListening ? 'Stop voice recording' : 'Start voice recording'}
-          >
-            {isListening ? (
-              <>
-                <MicOff className="w-4 h-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Stop</span>
-              </>
-            ) : (
-              <>
-                <Mic className="w-4 h-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Voice</span>
-              </>
-            )}
-          </button>
-        )}
       </div>
 
       {showHistory && (
         <div
           id={historyPanelId}
-          className="mb-4 surface-panel p-4"
+          className="mb-4 rounded-lg border border-white/[0.08] bg-white/[0.04] p-4 xl:hidden"
           role="region"
           aria-label="Prompt history"
         >
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium text-gray-300">Recent Prompts</h4>
+            <h4 className="text-sm font-medium text-slate-300">Recent Prompts</h4>
             <div className="flex gap-1">
               <button
                 type="button"
                 onClick={handleImport}
-                className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded-lg transition-colors"
+                className="p-2 text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] rounded-lg transition-colors"
                 title="Import history"
                 aria-label="Import history"
               >
@@ -335,7 +331,7 @@ const InputPanel = () => {
               <button
                 type="button"
                 onClick={handleExportJSON}
-                className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded-lg transition-colors"
+                className="p-2 text-slate-400 hover:text-slate-200 hover:bg-white/[0.06] rounded-lg transition-colors"
                 title="Export as JSON"
                 aria-label="Export history as JSON"
               >
@@ -344,7 +340,7 @@ const InputPanel = () => {
               <button
                 type="button"
                 onClick={handleClearHistory}
-                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
+                className="p-2 text-red-300 hover:text-red-100 hover:bg-red-300/[0.08] rounded-lg transition-colors"
                 title="Clear history"
                 aria-label="Clear all history"
               >
@@ -405,18 +401,18 @@ const InputPanel = () => {
               />
             ) : (
               filteredHistory.map((item: HistoryItem) => (
-                <div key={item.id} className="bg-gray-700/30 rounded-lg p-3 hover:bg-gray-700/40 transition-colors group">
+                <div key={item.id} className="group rounded-lg border border-white/[0.06] bg-white/[0.035] p-3 transition-colors hover:border-teal-300/20 hover:bg-teal-300/[0.05]">
                   <div className="flex items-start justify-between gap-2">
                     <button
                       type="button"
                       onClick={() => loadFromHistory(item)}
-                      className="text-left flex-1 text-gray-300 text-sm hover:text-primary-300 transition-colors min-w-0"
+                      className="min-w-0 flex-1 text-left text-sm text-slate-300 transition-colors hover:text-teal-100"
                     >
                       <p className="truncate font-medium">{item.input}</p>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                      <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
                         <Clock className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
                         <span>{formatRelativeTime(item.timestamp)}</span>
-                        <span className="text-gray-600">|</span>
+                        <span className="text-slate-700">|</span>
                         <span>{getWordCount(item.input)} words</span>
                       </div>
                     </button>
@@ -424,7 +420,7 @@ const InputPanel = () => {
                       <button
                         type="button"
                         onClick={() => handleDuplicateItem(item)}
-                        className="p-1.5 text-gray-400 hover:text-primary-300 hover:bg-primary-900/20 rounded-lg transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-teal-200 hover:bg-teal-300/[0.08] rounded-lg transition-colors"
                         title="Duplicate"
                         aria-label="Duplicate prompt"
                       >
@@ -433,7 +429,7 @@ const InputPanel = () => {
                       <button
                         type="button"
                         onClick={() => handleDeleteItem(item.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-red-200 hover:bg-red-300/[0.08] rounded-lg transition-colors"
                         aria-label="Delete history item"
                       >
                         <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
@@ -462,11 +458,11 @@ const InputPanel = () => {
           value={input}
           onChange={handleInputChange}
           placeholder="Type your basic idea here... (e.g., 'write a story about space travel', 'analyze sales data', 'create a meal plan')"
-          className={`w-full auto-expand-textarea bg-gray-800/50 border rounded-2xl p-6 text-gray-100 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 transition-all textarea-container custom-scrollbar ${
+          className={`w-full auto-expand-textarea resize-none rounded-lg border bg-[#060a0f]/70 p-5 text-[0.95rem] leading-relaxed text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 transition-all textarea-container custom-scrollbar ${
             validationError
-              ? 'border-error-500 focus:ring-error-400/70 focus:border-error-400'
-              : 'border-gray-600/50 focus:ring-primary-400/70 focus:border-primary-400'
-          } caret-primary-400`}
+              ? 'border-red-300/60 focus:ring-red-300/20 focus:border-red-200/70'
+              : 'border-white/[0.09] focus:ring-teal-300/15 focus:border-teal-300/50'
+          } caret-teal-300`}
           style={{ minHeight: TEXTAREA_MIN_HEIGHT, maxHeight: TEXTAREA_MAX_HEIGHT }}
           aria-label="Prompt input"
           aria-describedby={suggestions.length > 0 ? suggestionsPanelId : undefined}
@@ -474,7 +470,7 @@ const InputPanel = () => {
         />
         <div className="absolute bottom-3 right-3 flex items-center gap-3">
           {validationError && (
-            <span className="text-xs text-error-400 font-medium">
+            <span className="text-xs text-red-200 font-medium">
               {validationError}
             </span>
           )}
@@ -484,7 +480,7 @@ const InputPanel = () => {
             min={10}
             className="text-xs"
           />
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-slate-500">
             {wordCount} {wordCount === 1 ? 'word' : 'words'}
           </span>
         </div>
@@ -493,25 +489,25 @@ const InputPanel = () => {
       {suggestions.length > 0 && (
         <div
           id={suggestionsPanelId}
-          className="mt-4 surface-panel p-4"
+          className="mt-4 rounded-lg border border-amber-300/15 bg-amber-300/[0.04] p-4"
           role="region"
           aria-label="Smart suggestions"
         >
           <div className="flex items-center gap-2 mb-3">
-            <Lightbulb className="w-4 h-4 text-yellow-400" aria-hidden="true" />
-            <h4 className="text-sm font-medium text-gray-300">Smart Suggestions</h4>
+            <Lightbulb className="w-4 h-4 text-amber-200" aria-hidden="true" />
+            <h4 className="text-sm font-medium text-amber-100">Smart Suggestions</h4>
           </div>
           <div className="space-y-2">
             {suggestions.map((suggestion: Suggestion, index) => (
-              <div key={index} className="flex items-center justify-between bg-gray-700/30 rounded-lg p-3 hover:bg-gray-700/40 transition-colors">
-                <div className="flex items-center text-sm text-gray-300 min-w-0 mr-3">
-                  <Sparkles className="w-4 h-4 mr-2 text-teal-400 flex-shrink-0" aria-hidden="true" />
+              <div key={index} className="flex items-center justify-between rounded-lg border border-white/[0.06] bg-black/15 p-3 transition-colors hover:bg-white/[0.04]">
+                <div className="flex min-w-0 items-center text-sm text-slate-200 mr-3">
+                  <Sparkles className="w-4 h-4 mr-2 text-amber-200 flex-shrink-0" aria-hidden="true" />
                   <span className="truncate">{suggestion.text}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => applySuggestion(suggestion)}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 rounded-lg text-sm font-medium transition-all flex-shrink-0"
+                  className="flex flex-shrink-0 items-center gap-1 rounded-lg border border-amber-200/20 bg-amber-200/[0.08] px-3 py-1.5 text-sm font-medium text-amber-100 transition-all hover:bg-amber-200/[0.13]"
                 >
                   <Plus className="w-3 h-3" aria-hidden="true" />
                   Add
@@ -526,8 +522,12 @@ const InputPanel = () => {
         <button
           type="button"
           onClick={handleGenerate}
-          disabled={!input.trim() || isGenerating || requestsLeft === 0}
-          className="flex-1 bg-gradient-to-r from-teal-600 to-purple-600 text-white py-3.5 px-6 rounded-xl font-semibold hover:from-teal-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20"
+          disabled={isGenerateDisabled}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3.5 font-semibold transition-all disabled:cursor-not-allowed ${
+            showPrimaryGenerate
+              ? 'bg-gradient-to-r from-teal-400 via-teal-500 to-emerald-500 text-[#06100f] shadow-[0_22px_70px_rgba(20,184,166,0.2)] hover:brightness-110 disabled:opacity-70'
+              : 'border border-white/[0.08] bg-white/[0.04] text-slate-500'
+          }`}
         >
           {isGenerating ? (
             <>
@@ -544,15 +544,15 @@ const InputPanel = () => {
         <button
           type="button"
           onClick={clearAll}
-          disabled={!input && !document.querySelector('[aria-label="Enhanced prompt output"] pre')}
-          className="px-5 py-3.5 bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 rounded-xl font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={!input && !output}
+          className="rounded-lg border border-white/[0.09] bg-white/[0.04] px-5 py-3.5 font-medium text-slate-300 transition-all hover:border-white/[0.16] hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           Clear
         </button>
       </div>
 
       {isListening && (
-        <div className="mt-3 flex items-center gap-2 text-sm text-red-400 bg-red-900/20 border border-red-600/20 rounded-lg p-2.5" role="status" aria-live="polite">
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#ff7a68]/20 bg-[#ff7a68]/10 p-2.5 text-sm text-[#ffd8d2]" role="status" aria-live="polite">
           <Volume2 className="w-4 h-4 animate-pulse" aria-hidden="true" />
           <span>Listening... speak now</span>
         </div>

@@ -1,8 +1,8 @@
 import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { applyCorsHeaders, rejectDisallowedCorsRequest } from './api/cors.js';
 
 // Load environment variables
 dotenv.config();
@@ -23,20 +23,18 @@ app.use((req, res, next) => {
 });
 
 // Middleware
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
-app.use(cors({
-  origin: allowedOrigins.length > 0
-    ? (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
-      }
-    : true, // Allow all in dev when ALLOWED_ORIGINS is not set
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'X-API-Key'],
-}));
+app.use((req, res, next) => {
+  applyCorsHeaders(req, res);
+
+  if (rejectDisallowedCorsRequest(req, res)) return;
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
+  next();
+});
 app.use(express.json({ limit: '1mb' }));
 
 // Import API routes
@@ -54,7 +52,7 @@ app.get('/api/health', (req, res) => {
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(join(__dirname, 'dist')));
   
-  app.get('*', (req, res) => {
+  app.get('/{*splat}', (req, res) => {
     res.sendFile(join(__dirname, 'dist', 'index.html'));
   });
 }

@@ -1,5 +1,6 @@
 import { OpenAI } from 'openai';
 import { checkRateLimit, incrementUsage, getUsageStats } from './rateLimit.js';
+import { applyCorsHeaders, rejectDisallowedCorsRequest } from './cors.js';
 
 // Initialize OpenAI only if API key is available
 let openai = null;
@@ -347,24 +348,13 @@ VALIDATION (verify before output):
 </output>`;
 
 export default async function handler(req, res) {
-  // Enable CORS with origin allowlist
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
-  const origin = req.headers.origin;
-  if (allowedOrigins.length > 0 && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (allowedOrigins.length === 0) {
-    // Fallback: allow same-origin requests only (no origin header means same-origin)
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    }
-  }
-  res.setHeader('Vary', 'Origin');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-API-Key');
+  applyCorsHeaders(req, res);
+
+  if (rejectDisallowedCorsRequest(req, res)) return;
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return res.status(204).end();
   }
 
   // Only allow POST requests

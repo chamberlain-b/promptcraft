@@ -16,10 +16,10 @@ const CharacterCounter: FC<CharacterCounterProps> = ({
   className = '',
 }) => {
   const getColor = () => {
-    if (max && current > max) return 'text-error-400';
-    if (min && current < min) return 'text-warning-400';
-    if (max && current > max * 0.9) return 'text-warning-400';
-    return 'text-gray-400';
+    if (max && current > max) return 'text-red-300';
+    if (min && current < min) return 'text-amber-300';
+    if (max && current > max * 0.9) return 'text-amber-300';
+    return 'text-slate-500';
   };
 
   const getMessage = () => {

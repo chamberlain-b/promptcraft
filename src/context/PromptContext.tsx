@@ -436,6 +436,7 @@ export const PromptProvider: React.FC<PromptProviderProps> = ({ children }) => {
   const useExample = useCallback((example: Example) => {
     setInput(example.input);
     setOutput(example.output);
+    setLlmStatus('enhanced');
 
     if (example.tone) {
       setCurrentTone(example.tone);

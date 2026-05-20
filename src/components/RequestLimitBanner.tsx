@@ -12,13 +12,13 @@ const RequestLimitBanner: FC<RequestLimitBannerProps> = ({ requestLimit, request
   const liveMode = requestsLeft === 0 ? 'assertive' : 'polite';
 
   return (
-    <div className="mb-6 flex justify-center" aria-live={liveMode} role={statusRole}>
-      <div className={`rounded-xl px-6 py-3 text-lg font-semibold shadow-md border-2 ${
+    <div className="mb-4 flex justify-center" aria-live={liveMode} role={statusRole}>
+      <div className={`rounded-lg px-4 py-2 text-sm font-semibold shadow-md border ${
         requestsLeft === 0
-          ? 'bg-red-900/70 border-red-500 text-red-200'
+          ? 'bg-red-300/[0.09] border-red-300/30 text-red-100'
           : requestsLeft <= 5
-          ? 'bg-yellow-900/70 border-yellow-400 text-yellow-200'
-          : 'bg-teal-900/70 border-teal-500 text-teal-200'
+          ? 'bg-amber-300/[0.09] border-amber-300/30 text-amber-100'
+          : 'bg-teal-300/[0.08] border-teal-300/25 text-teal-100'
       }`}>
         {requestsLeft === 0
           ? `You have reached your free request limit for this month.`
