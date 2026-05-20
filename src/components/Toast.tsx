@@ -38,13 +38,13 @@ const Toast: FC<ToastProps> = ({ id, type, message, duration = 5000, onClose }) 
   const getStyles = () => {
     switch (type) {
       case 'success':
-        return 'bg-success-900/90 border-success-600/50 text-success-100';
+        return 'bg-emerald-300/[0.10] border-emerald-300/25 text-emerald-100';
       case 'error':
-        return 'bg-error-900/90 border-error-600/50 text-error-100';
+        return 'bg-red-300/[0.10] border-red-300/25 text-red-100';
       case 'warning':
-        return 'bg-warning-900/90 border-warning-600/50 text-warning-100';
+        return 'bg-amber-300/[0.10] border-amber-300/25 text-amber-100';
       case 'info':
-        return 'bg-info-900/90 border-info-600/50 text-info-100';
+        return 'bg-blue-300/[0.10] border-blue-300/25 text-blue-100';
     }
   };
 
@@ -53,7 +53,7 @@ const Toast: FC<ToastProps> = ({ id, type, message, duration = 5000, onClose }) 
       role="alert"
       className={`
         ${getStyles()}
-        backdrop-blur-lg border rounded-xl p-4 shadow-xl
+        bg-[#0a1015]/95 backdrop-blur-lg border rounded-lg p-4 shadow-[0_24px_80px_rgba(0,0,0,0.35)]
         animate-toast-in flex items-start gap-3 min-w-[300px] max-w-md
       `}
     >

@@ -15,6 +15,20 @@ interface EnhancedPromptResult {
   error: string | null;
 }
 
+interface GeneratePromptResponse {
+  result?: string | null;
+  requestsLeft?: number | null;
+  limit?: number | null;
+  enhanced?: boolean;
+  error?: string;
+}
+
+interface GeneratePromptErrorResponse {
+  requestsLeft?: number | null;
+  limit?: number | null;
+  error?: string;
+}
+
 interface IntentAnalysis {
   intent: string;
   confidence: number;
@@ -64,7 +78,7 @@ class LLMService {
       context
     };
 
-    let lastError: AxiosError | null = null;
+    let lastError: AxiosError<GeneratePromptErrorResponse> | null = null;
 
     for (let attempt = 0; attempt <= API_MAX_RETRIES; attempt++) {
       try {
@@ -75,7 +89,7 @@ class LLMService {
         }
 
         console.log('Sending request for AI enhancement...');
-        const response = await axios.post('/api/generate', requestBody, {
+        const response = await axios.post<GeneratePromptResponse>('/api/generate', requestBody, {
           timeout: API_TIMEOUT,
           signal: this.abortController.signal,
           headers: {
@@ -97,7 +111,7 @@ class LLMService {
           error: null
         };
       } catch (error) {
-        const axiosError = error as AxiosError<any>;
+        const axiosError = error as AxiosError<GeneratePromptErrorResponse>;
 
         // Don't retry if the request was intentionally cancelled
         if (axiosError.code === 'ERR_CANCELED' && this.abortController?.signal.aborted) {

@@ -164,8 +164,8 @@ Create a professional blog post about AI (500-1500 words).
     await user.click(generateButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/⚠️/)).toBeInTheDocument();
+      expect(screen.getByText(/Service Issue/i)).toBeInTheDocument();
+      expect(screen.getByText(/API service temporarily unavailable/i)).toBeInTheDocument();
     });
   });
 });
-

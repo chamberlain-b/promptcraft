@@ -1,5 +1,5 @@
 import { type FC } from 'react';
-import { Wand2, Sparkles, Copy, Check, RefreshCw, AlertTriangle, FileText } from 'lucide-react';
+import { AlertTriangle, Check, CheckCircle2, Copy, FileText, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
 import { usePrompt } from '../context/PromptContext';
 import { getWordCount } from '../utils/validation';
 import LoadingSkeleton from './LoadingSkeleton';
@@ -15,57 +15,78 @@ const OutputPanel: FC = () => {
   return (
     <section
       aria-label="Enhanced prompt output"
-      className="surface-card p-8 flex flex-col min-h-[32rem] md:min-h-card card-container"
+      className="workbench-panel flex min-h-[36rem] flex-col p-4 sm:p-5 lg:min-h-[44rem]"
       aria-busy={isGenerating && !output}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-semibold text-gray-100 flex items-center gap-2">
-          <Wand2 className="w-5 h-5 text-purple-400" aria-hidden="true" />
-          Enhanced Prompt
-        </h3>
-        {output && (
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <FileText className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>{outputWordCount} {outputWordCount === 1 ? 'word' : 'words'}</span>
+        <div>
+          <p className="panel-kicker">Output</p>
+          <h3 className="mt-1 flex items-center gap-2 text-lg font-semibold tracking-[-0.01em] text-white">
+            <Wand2 className="w-5 h-5 text-amber-200" aria-hidden="true" />
+            Enhanced Prompt
+          </h3>
+        </div>
+        <div className="flex items-center gap-2">
+          {output && (
+            <div className="hidden items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs text-slate-400 sm:flex">
+              <FileText className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>{outputWordCount} {outputWordCount === 1 ? 'word' : 'words'}</span>
+            </div>
+          )}
+          <div className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium ${
+            output && llmStatus === 'enhanced'
+              ? 'border-emerald-300/20 bg-emerald-300/[0.07] text-emerald-100'
+              : llmStatus === 'error'
+              ? 'border-red-300/20 bg-red-300/[0.07] text-red-100'
+              : 'border-white/[0.08] bg-white/[0.04] text-slate-400'
+          }`}>
+            {output && llmStatus === 'enhanced' ? (
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : llmStatus === 'error' ? (
+              <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {output && llmStatus === 'enhanced' ? 'Ready' : llmStatus === 'error' ? 'Review' : 'Waiting'}
           </div>
-        )}
+        </div>
       </div>
       <div
-        className="surface-panel p-4 flex-1 flex flex-col card-container"
+        className="flex flex-1 flex-col rounded-lg border border-white/[0.08] bg-[#05080d]/75 p-4 card-container"
         aria-live="polite"
       >
         {output && (
           <div
-            className={`mb-3 p-2.5 rounded-lg border ${
+            className={`mb-3 rounded-lg border px-3 py-2.5 ${
               llmStatus === 'enhanced'
-                ? 'bg-green-900/20 border-green-600/30'
-                : 'bg-red-900/20 border-red-600/30'
+                ? 'bg-emerald-300/[0.06] border-emerald-300/20'
+                : 'bg-red-300/[0.07] border-red-300/20'
             }`}
             role={llmStatus === 'error' ? 'alert' : 'status'}
           >
             <div className="flex items-center gap-2">
               {llmStatus === 'enhanced' ? (
                 <>
-                  <Sparkles className="w-4 h-4 text-green-400" aria-hidden="true" />
-                  <span className="text-sm text-green-300 font-medium">AI-Enhanced Prompt</span>
+                  <Sparkles className="w-4 h-4 text-emerald-200" aria-hidden="true" />
+                  <span className="text-sm text-emerald-100 font-medium">AI-Enhanced Prompt</span>
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="w-4 h-4 text-red-400" aria-hidden="true" />
-                  <span className="text-sm text-red-300 font-medium">Service Issue</span>
+                  <AlertTriangle className="w-4 h-4 text-red-200" aria-hidden="true" />
+                  <span className="text-sm text-red-100 font-medium">Service Issue</span>
                 </>
               )}
             </div>
           </div>
         )}
-        <div className="flex-1 min-h-[400px] overflow-y-auto custom-scrollbar">
+        <div className="min-h-[400px] flex-1 overflow-y-auto custom-scrollbar">
           {output ? (
             <div className="h-full flex flex-col">
               <div className="flex-1 overflow-hidden">
-                <pre className="text-gray-200 leading-relaxed text-container">{output}</pre>
+                <pre className="text-container font-mono text-[0.92rem] leading-7 text-slate-200">{output}</pre>
                 {llmStatus === 'enhanced' && (
-                  <div className="mt-3 p-2.5 bg-blue-900/20 border border-blue-600/30 rounded-lg">
-                    <p className="text-xs text-blue-300 text-container">
+                  <div className="mt-4 rounded-lg border border-blue-300/15 bg-blue-300/[0.05] p-3">
+                    <p className="text-container text-xs text-blue-100/80">
                       This is an enhanced prompt ready to use with ChatGPT, Claude, or other AI systems. Copy and paste it directly!
                     </p>
                   </div>
@@ -77,18 +98,18 @@ const OutputPanel: FC = () => {
               {isGenerating ? (
                 <div className="w-full max-w-md">
                   <div className="flex items-center justify-center gap-2 mb-4">
-                    <RefreshCw className="w-5 h-5 text-purple-400 animate-spin" aria-hidden="true" />
-                    <span className="text-sm font-medium text-purple-300">Crafting your enhanced prompt...</span>
+                    <RefreshCw className="w-5 h-5 text-teal-300 animate-spin" aria-hidden="true" />
+                    <span className="text-sm font-medium text-teal-100">Crafting your enhanced prompt...</span>
                   </div>
                   <LoadingSkeleton lines={6} />
                 </div>
               ) : (
                 <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-gray-700/30 border border-gray-600/30 flex items-center justify-center mx-auto mb-4">
-                    <Wand2 className="w-7 h-7 text-gray-500" aria-hidden="true" />
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.035]">
+                    <Wand2 className="w-7 h-7 text-slate-500" aria-hidden="true" />
                   </div>
-                  <p className="text-gray-400 text-sm">Your enhanced prompt will appear here</p>
-                  <p className="text-gray-500 text-xs mt-1">Enter an idea and click Generate</p>
+                  <p className="text-slate-300 text-sm">Your enhanced prompt will appear here</p>
+                  <p className="text-slate-500 text-xs mt-1">Enter an idea and click Generate</p>
                 </div>
               )}
             </div>
@@ -100,10 +121,12 @@ const OutputPanel: FC = () => {
           type="button"
           onClick={copyToClipboard}
           disabled={!output}
-          className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium transition-all disabled:cursor-not-allowed ${
             copied
-              ? 'bg-green-600/30 border border-green-500/40 text-green-300'
-              : 'bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed'
+              ? 'bg-emerald-300/[0.12] border border-emerald-300/30 text-emerald-100'
+              : output
+              ? 'bg-[#ff7a68] hover:brightness-110 text-[#190604]'
+              : 'border border-white/[0.08] bg-white/[0.04] text-slate-500'
           }`}
         >
           {copied ? (
@@ -120,11 +143,11 @@ const OutputPanel: FC = () => {
         </button>
         {llmStatus === 'error' && output && input.trim() && (
           <button
-            type="button"
-            onClick={generatePrompt}
-            disabled={isGenerating}
-            className="px-6 py-3 bg-purple-600/30 hover:bg-purple-600/40 border border-purple-500/30 text-purple-300 rounded-xl font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          type="button"
+          onClick={generatePrompt}
+          disabled={isGenerating}
+          className="flex items-center justify-center gap-2 rounded-lg border border-white/[0.09] bg-white/[0.04] px-6 py-3 font-medium text-slate-200 transition-all hover:border-white/[0.16] hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-50"
+        >
             <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} aria-hidden="true" />
             Retry
           </button>

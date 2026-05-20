@@ -65,10 +65,9 @@ Transform your casual ideas into powerful AI prompts with intelligent enhancemen
 ### Configuration
 
 1. **Set up OpenAI API (Optional)**
-   - Click the "Settings" button in the app
-   - Enter your OpenAI API key
-   - Test the connection
-   - Enable LLM integration features
+   - Copy `.env.example` to `.env`
+   - Set `OPENAI_API_KEY` on the server
+   - Set `ALLOWED_ORIGINS` to the production site origin before deploying
 
 2. **Customize Preferences**
    - Set your preferred default tone and length
@@ -180,7 +179,9 @@ src/
 - `npm run preview` - Preview production build
 
 ### Environment Variables
-- `REACT_APP_OPENAI_API_KEY` - OpenAI API key (optional)
+- `OPENAI_API_KEY` - server-side OpenAI API key used by `/api/generate`
+- `ALLOWED_ORIGINS` - comma-separated browser origins allowed to call the API cross-origin
+- `TRUST_PROXY` - set to `1` only behind a trusted reverse proxy
 
 ## 🤝 Contributing
 

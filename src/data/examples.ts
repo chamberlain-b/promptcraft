@@ -3,17 +3,17 @@ import type { ExampleItem } from '../context/PromptContext.d';
 
 export const examples: ExampleItem[] = [
   {
-    title: "Content Writing",
-    input: "write a blog post about AI",
-    output: "You are an expert content writer and technology journalist with deep knowledge of artificial intelligence. Write a comprehensive, engaging blog post about AI that covers current trends, applications, and future implications. The post should be 800-1200 words, include relevant examples and case studies, use clear headings and subheadings, maintain a professional yet accessible tone, and provide actionable insights for readers. Include an engaging introduction, well-structured body with supporting evidence, and a compelling conclusion that encourages further engagement with the topic.",
+    title: "Blog Post Outline",
+    input: "write a blog post about AI workflows",
+    output: "You are an expert content strategist. Create a structured blog post outline about AI workflows for operators and product teams. Include a clear thesis, section-by-section headings, practical examples, risks to avoid, and a closing checklist. Keep the tone professional, avoid hype, and make each section actionable for a reader who wants to improve an existing workflow.",
     icon: PenTool,
     tone: 'professional',
-    length: 'long'
+    length: 'medium'
   },
   {
     title: "App Development",
     input: "build a task management app",
-    output: "You are a senior software engineer and technical mentor with extensive experience in Python development. Create a comprehensive Python function to sort a list that demonstrates best practices and includes multiple sorting options. The function should handle different data types, include comprehensive error handling, provide detailed comments explaining the logic, and include usage examples with different scenarios. Consider edge cases like empty lists, mixed data types, and performance optimization. Provide both the function implementation and clear documentation on how to use it effectively.",
+    output: "You are a senior product engineer. Draft a technical implementation plan for a task management app. Cover the core user flows, data model, component architecture, API boundaries, accessibility requirements, offline or sync considerations, and a staged build plan. Call out tradeoffs and risks before recommending the first milestone.",
     icon: Code,
     tone: 'technical',
     length: 'comprehensive'
@@ -21,7 +21,7 @@ export const examples: ExampleItem[] = [
   {
     title: "AI Integration",
     input: "integrate AI chatbot into website",
-    output: "You are a data analyst and research specialist with expertise in sales analytics and business intelligence. Conduct a comprehensive analysis of sales data trends that provides actionable insights for business decision-making. Your analysis should include trend identification, seasonal patterns, performance metrics, comparative analysis, and predictive insights. Use clear visualizations where appropriate, provide statistical context, identify key drivers of sales performance, and offer specific recommendations for improvement. Structure your response with clear sections for findings, insights, and actionable next steps.",
+    output: "You are an AI product architect. Create an integration brief for adding an AI assistant to a website. Include target user jobs, safe fallback behavior, model and retrieval requirements, privacy constraints, UI states, analytics events, and launch criteria. Explain how the assistant should earn user trust without interrupting the main site experience.",
     icon: Brain,
     tone: 'professional',
     length: 'comprehensive'
@@ -29,15 +29,15 @@ export const examples: ExampleItem[] = [
   {
     title: "Business Strategy",
     input: "create a business plan for a startup",
-    output: "You are a nutritionist and meal planning expert with knowledge of dietary science and culinary arts. Create a comprehensive weekly meal plan that prioritizes nutrition, variety, and practicality. The plan should include balanced macronutrients, diverse food groups, seasonal ingredients, and accommodate common dietary preferences. Provide detailed recipes with nutritional information, shopping lists organized by category, preparation time estimates, and storage recommendations. Consider budget constraints, cooking skill levels, and time availability. Include options for meal prep and leftovers to maximize efficiency.",
+    output: "You are a startup strategy advisor. Create a concise business plan for an early-stage SaaS product. Include the customer segment, problem statement, differentiated offer, pricing hypothesis, go-to-market plan, operating assumptions, risks, validation experiments, and the next 30-day action plan. Keep the plan realistic and investor-ready.",
     icon: Calendar,
-    tone: 'friendly',
+    tone: 'professional',
     length: 'comprehensive'
   },
   {
     title: "Content Marketing",
     input: "develop a content marketing strategy",
-    output: "You are a productivity consultant and project manager with expertise in marketing strategy and campaign execution. Develop a comprehensive marketing campaign plan that includes clear objectives, target audience analysis, channel strategy, timeline, budget allocation, and success metrics. The plan should be actionable with specific tasks, deadlines, and responsibilities. Include risk assessment, contingency plans, and performance tracking methods. Provide templates for key deliverables, communication protocols, and evaluation criteria. Structure the response with clear phases, milestones, and measurable outcomes.",
+    output: "You are a B2B content lead. Build a content marketing strategy with audience segments, narrative pillars, channel priorities, publishing cadence, repurposing plan, lead magnets, success metrics, and a 90-day execution calendar. Include examples of strong post angles and clear criteria for what not to publish.",
     icon: MessageSquare,
     tone: 'professional',
     length: 'comprehensive'
@@ -45,9 +45,9 @@ export const examples: ExampleItem[] = [
   {
     title: "Creative Writing",
     input: "write a short story about time travel",
-    output: "You are a creative professional and storytelling expert with deep understanding of narrative structure and science fiction elements. Write an engaging short story about time travel that explores the complexities of temporal paradoxes, human nature, and the consequences of changing the past. The story should be 1500-2000 words, feature well-developed characters, include vivid descriptions, maintain consistent internal logic, and deliver a satisfying emotional arc. Use creative narrative techniques, build tension effectively, and provide a thought-provoking conclusion that resonates with readers.",
+    output: "You are a fiction editor and speculative storyteller. Write a short story about time travel with a clear emotional premise, one central paradox, vivid sensory details, and a satisfying final turn. Keep the timeline internally consistent, avoid exposition dumps, and make the ending feel inevitable in hindsight.",
     icon: Sparkles,
     tone: 'creative',
-    length: 'long'
+    length: 'medium'
   }
 ];

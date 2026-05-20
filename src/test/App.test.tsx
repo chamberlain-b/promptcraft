@@ -6,7 +6,7 @@ describe('App', () => {
   it('renders the main heading and callout copy', () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: /prompt craft/i })).toBeInTheDocument();
-    expect(screen.getByText(/Transform your basic ideas/i)).toBeInTheDocument();
+    expect(screen.getByText(/Turn rough intent into production-ready AI prompts/i)).toBeInTheDocument();
   });
 
   it('enables generation button after typing input', async () => {
